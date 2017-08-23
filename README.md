@@ -13,3 +13,8 @@
 `/forget`
 * Method: POST
 * Params: username
+
+`update_profile`
+* Method: POST
+* Params: name, email, mobile, old_password, new_password
+* Notes: For changing password, both old_password or new_password should be sent.

@@ -145,6 +145,81 @@ const routes = [
         reply('server-side error' + err)
       })
     }
+  },
+
+  // Change Profile
+  {
+    path: '/update_profile',
+    method: 'POST',
+    config: {
+      auth: {
+        strategy: 'token'
+      }
+    },
+    handler: (request, reply) => {
+      const { name, email, mobile, new_password, old_password } = request.payload
+      let username = request.auth.credentials.username
+
+      Knex('users').select('password').where({username}).then(([user]) => {
+        if (!user) {
+          reply({
+            success: false,
+            message: `Specified user doesn't exist`
+          })
+          return
+        }
+
+        if ((old_password || new_password) && !(old_password && new_password)) {
+          reply({
+            success: false,
+            message: `Both Current Password and New Password are required`
+          })
+          return
+        }
+
+        if (old_password && new_password) {
+          if (!bcrypt.compareSync(old_password, user.password)) {
+            reply({
+              success: false,
+              message: `Incorrect Password`
+            })
+            return
+          }
+        }
+
+        let data = {}
+        if (name) {
+          data['name'] = name
+        }
+        if (email) {
+          data['email'] = email
+        }
+        if (mobile) {
+          data['mobile'] = mobile
+        }
+        if (new_password) {
+          data['password'] = bcrypt.hashSync(new_password, 10)
+        }
+
+        Knex('users')
+          .where('username', '=', username)
+          .update(data).then(count => {
+          if (count) {
+            reply({
+              success: true,
+              message: 'Profile update successful'
+            })
+          } else {
+            reply({
+              success: false,
+              message: 'Password update failed'
+            })
+          }
+        })
+      }).catch((err) => {
+        reply('server-side error' + err)
+      })
+    }
   }
 ]
 
