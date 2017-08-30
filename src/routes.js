@@ -392,17 +392,14 @@ const routes = [
   {
     path: '/status', 
     method: 'GET', 
-    // config: {
-    //   auth: {
-    //     strategy: 'token'
-    //   }
-    // },
     handler: (request, reply) => {
       var params = request.query
       var tm = request.query.tm
+      var to = request.query.to
       var dept = request.query.dept
       var query;
 
+      // if time is present as a parameter, sms will be sent
       if (tm) {
         query = Knex.raw(`SELECT data.shift, count(data.shift) as present, if (data.shift = 'a' and current_time >= '06:00' and current_time <= '14:00', (select count(*) as total from shifts where shift=data.shift group by shift), if (data.shift = 'g' and current_time >= '08:30' and current_time <= '17:30', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'b' and current_time >= '14:00' and current_time <= '22:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'e' and current_time >= '18:00' and current_time <= '02:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'c' and current_time >= '22:00' and current_time <= '06:00', (select count(*) as total from shifts where shift=data.shift group by shift), 0))))) as expected FROM data WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and in_time <= '${tm}' and out_time is null group by data.shift`)
 
@@ -413,9 +410,15 @@ const routes = [
               message += item.shift + ' - ' + item.present + '/' + item.expected + '     '
             })
             if (message){
-              message = message.substr(0, message.length - 2)
-              var to = '9885721144,9703400284'
+              message = tm + ': ' + message.substr(0, message.length - 2)
+              if (!to) {
+                to = '9885721144,9703400284'
+              }              
               if (to && message) {
+                Knex('sms').insert({mobile: to, message: message}).then(result => {
+                  console.log(result)
+                })
+                console.log(`SMS sent: ${to}, ${message}`)
                 var request = require('request')
                 const url = 'http://login.smsmoon.com/API/sms.php'
                 const body = {
@@ -444,7 +447,8 @@ const routes = [
                   success: false,
                   error: 'Sending SMS failed'
                 })
-              }            }
+              }
+            }
           }
         })
 
