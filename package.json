@@ -23,7 +23,9 @@
     "knex": "^0.13.0",
     "moment": "^2.18.1",
     "mysql": "^2.13.0",
-    "request": "^2.81.0"
+    "nodemailer": "^4.1.0",
+    "request": "^2.81.0",
+    "underscore-node": "^0.1.2"
   },
   "devDependencies": {
     "eslint-plugin-import": "^2.7.0",

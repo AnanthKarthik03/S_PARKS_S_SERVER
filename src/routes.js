@@ -6,6 +6,8 @@ const bcrypt = require('bcrypt')
 var generator = require('generate-password')
 var fs = require('fs')
 var excelToJson = require('convert-excel-to-json')
+const nodemailer = require('nodemailer')
+var _ = require('underscore-node')
 
 const routes = [
   /* USERS */
@@ -399,6 +401,26 @@ const routes = [
       var dept = request.query.dept
       var query;
 
+      // if dept is presnt, insrt values into table for email creation
+      // CHANGE CLOSED TO 1 AFTER CODING IS DONE
+      if (dept) {
+          query = Knex.raw(`insert into email(dt, tm, deptname, shift, present, expected) (SELECT subdate(current_date, 1) as dt, ${tm} as tm, shifts.dept as deptname, data.shift, count(data.shift) as present, 
+          if (data.shift = 'a' and current_time >= '06:00' and current_time < '14:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname), 
+          if (data.shift = 'g' and current_time >= '08:30' and current_time < '17:30', (select count(*) as total from shifts where shift=data.shift  and dept=deptname),
+          if (data.shift = 'b' and current_time >= '14:00' and current_time < '22:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname ),
+          if (data.shift = 'e' and current_time >= '18:00' and current_time < '02:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname),
+          if (data.shift = 'c' and current_time >= '22:00' and current_time < '06:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname), 0))))) as expected FROM data 
+          inner join shifts on shifts.emp_code = data.emp_code
+          WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and  out_time is null group by data.shift, shifts.dept order by shift asc,present desc,expected desc)`)
+
+        query.then(result => {
+          reply({
+            success: true,
+            result
+          })
+        })
+      }
+
       // if time is present as a parameter, sms will be sent
       if (tm) {
         query = Knex.raw(`SELECT data.shift, count(data.shift) as present, if (data.shift = 'a' and current_time >= '06:00' and current_time <= '14:00', (select count(*) as total from shifts where shift=data.shift group by shift), if (data.shift = 'g' and current_time >= '08:30' and current_time <= '17:30', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'b' and current_time >= '14:00' and current_time <= '22:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'e' and current_time >= '18:00' and current_time <= '02:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'c' and current_time >= '22:00' and current_time <= '06:00', (select count(*) as total from shifts where shift=data.shift group by shift), 0))))) as expected FROM data WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and in_time <= '${tm}' and out_time is null group by data.shift`)
@@ -451,24 +473,9 @@ const routes = [
             }
           }
         })
-
-
-        if (dept) {
-          query = Knex.raw(`insert into email(dt, tm, deptname, shift, present, expected) (SELECT subdate(current_date, 1) as dt, '${tm}' as tm, shifts.dept as deptname, data.shift, count(data.shift) as present, 
-          if (data.shift = 'a' and current_time >= '06:00' and current_time < '14:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname), 
-          if (data.shift = 'g' and current_time >= '08:30' and current_time < '17:30', (select count(*) as total from shifts where shift=data.shift  and dept=deptname),
-          if (data.shift = 'b' and current_time >= '14:00' and current_time < '22:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname ),
-          if (data.shift = 'e' and current_time >= '18:00' and current_time < '02:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname),
-          if (data.shift = 'c' and current_time >= '22:00' and current_time < '06:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname), 0))))) as expected FROM data 
-          inner join shifts on shifts.emp_code = data.emp_code
-          WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and  in_time <= '${tm}' and out_time is null group by data.shift, shifts.dept order by shift asc,present desc,expected desc)`)
-
-          query.then(result => {})
-          
-        }
-      } else {
-        // query = Knex.raw(`SELECT data.shift, count(data.shift) as present, if (data.shift = 'a' and current_time >= '06:00' and current_time <= '14:00', (select count(*) as total from shifts where shift=data.shift group by shift), if (data.shift = 'g' and current_time >= '08:30' and current_time <= '17:30', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'b' and current_time >= '14:00' and current_time <= '22:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'e' and current_time >= '18:00' and current_time <= '02:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'c' and current_time >= '22:00' and current_time <= '06:00', (select count(*) as total from shifts where shift=data.shift group by shift), 0))))) as expected FROM data WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and out_time is null group by data.shift`)
-
+      } 
+      
+      if (!dept && !tm) {
         query = Knex.raw(`SELECT shifts.dept as deptname, data.shift, count(data.shift) as present, 
         if (data.shift = 'a' and current_time >= '06:00' and current_time < '14:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname), 
         if (data.shift = 'g' and current_time >= '08:30' and current_time < '17:30', (select count(*) as total from shifts where shift=data.shift  and dept=deptname),
@@ -492,15 +499,12 @@ const routes = [
           }
         })
       }
-
-      
-
- 
-    }
-  },
-
   
 
+ 
+    
+  }
+},
 
   //////////////////////
   /* Admin */
@@ -513,14 +517,15 @@ const routes = [
         var params = request.query
         var emp_code = params.emp_code
         var time = params.time
+        var dt = params.dt
 
-        if (!emp_code || !time) {
+        if (!emp_code || !dt || !time) {
           reply({
             success: false,
-            error: 'Please send both emp_code and time'
+            error: 'Please send both emp_code, dt and time'
           })
         } else {
-          Knex('data').insert({emp_code, time}).then(function (result) {
+          Knex('data_live').insert({emp_code, dt, in_time: time}).then(function (result) {
             reply({ success: true, message: result }) // respond back to request
           })
         }
@@ -2358,7 +2363,7 @@ const routes = [
           {emp_code: '80934', time: '6:13'},
           {emp_code: '80973', time: '22:14'},
           {emp_code: '10930', time: '6:12'},
-          {emp_code: '81340', time: '5:59'}       
+          {emp_code: '81340', time: '5:59'}            
         ]
 
 
@@ -4265,6 +4270,148 @@ const routes = [
           data: result
         })
       })
+    }
+  },
+
+  /* Mail */
+  {
+    path: '/mail', 
+    method: 'GET', 
+    handler: (request, reply) => {
+      console.log('in mail method')
+          // create reusable transporter object using the default SMTP transport
+          var transporter = nodemailer.createTransport({
+            host: 'mail.akrivia.in',
+            port: 465,
+            secure: true, // true for 465, false for other ports
+            auth: {
+                user: 'testmail@akrivia.in',
+                pass: 'Aeiou@123'
+            },
+            tls: { rejectUnauthorized: false }
+        });
+
+        var message = '';
+        let query = Knex.raw(`select * from email  order by dt`)
+        
+              console.log('in mail')
+        
+              query.then((results) => {
+                if (!results || results[0].length === 0) {
+                  message = 'No data found'
+                } else {
+                  var data = results[0]
+                  var depts = _.uniq(_.pluck(data, "deptname"))
+                  console.log('departments are', depts)
+                  var currentDepartment = null;
+
+                  depts.forEach(dept => {
+                    if (dept == currentDepartment) {
+                      message += `<tr>`
+                    } else {
+                      currentDepartment = dept
+                      message += `<tr><td rowspan="5">${dept}</td>`                      
+                    }
+
+                      var timings = ['06:15:00', '08:45:00', '14:15:00', '18:15:00', '22:15:00']
+                      timings.forEach(time => {
+                        message += `<td>${time}</td>`;
+  
+                        var a = _.filter(data, function (num) {return num.deptname == dept && num.tm == time && num.shift == 'A'})
+                        var b = _.filter(data, function (num) {return num.tm == time && num.shift == 'B'})
+                        var c = _.filter(data, function (num) {return num.tm == time && num.shift == 'C'})
+                        var e = _.filter(data, function (num) {return num.tm == time && num.shift == 'E'})
+                        var g = _.filter(data, function (num) {return num.tm == time && num.shift == 'G'})
+  
+                        if (a[0]) {
+                          message += `<td>${a[0].present}/${a[0].expected}</td>`
+                        } else {
+                          message += `<td></td>`
+                        }
+                        if (g[0]) {
+                          message += `<td>${g[0].present}/${g[0].expected}</td>`
+                        } else {
+                          message += `<td></td>`
+                        }
+                        if (b[0]) {
+                          message += `<td>${b[0].present}/${b[0].expected}</td>`
+                        } else {
+                          message += `<td></td>`
+                        }
+                        if (e[0]) {
+                          message += `<td>${e[0].present}/${e[0].expected}</td>`
+                        } else {
+                          message += `<td></td>`
+                        }
+                        if (c[0]) {
+                          message += `<td>${c[0].present}/${c[0].expected}</td>`
+                        } else {
+                          message += `<td></td>`
+                        }
+                        message += `</tr>`
+
+                      })
+
+                     
+            
+                    
+
+                  })
+
+
+// setup email data with unicode symbols
+var mailOptions = {
+  from: '"Vijay" <vijay.m@akrivia.in>', // sender address
+  to: 'vijay.m@akrivia.in', // list of receivers
+  subject: 'Mitsuba - End of Day Report', // Subject line
+  text: 'Mitsuba - End of Day Report', // plain text body
+  html: `
+  <style>
+  table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+  }
+  th, td {
+      padding: 5px;
+      text-align: left;    
+  }
+  </style>
+
+  <table style="width:100%">
+    <tr>
+      <th>Department</th>
+      <th>Shift Timind</th>
+      <th>A</th>
+      <th>GS</th>
+      <th>B</th>
+      <th>E</th>
+      <th>C</th>
+    </tr>
+    ${message}
+    
+</table>`
+};
+
+transporter.sendMail(mailOptions, (error, info) => {
+  if (error) {
+      return console.log(error);
+  }
+  console.log('Message sent: %s', info.messageId);
+});
+
+                  reply({
+                    success: true,
+                    message
+                  })
+
+                }
+              }).catch((err) => {
+                reply('server-side error' + err)
+              })
+
+
+  
+
     }
   }
 ]
