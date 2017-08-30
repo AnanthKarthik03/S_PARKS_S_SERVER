@@ -22,7 +22,8 @@
     "jsonwebtoken": "^7.4.1",
     "knex": "^0.13.0",
     "moment": "^2.18.1",
-    "mysql": "^2.13.0"
+    "mysql": "^2.13.0",
+    "request": "^2.81.0"
   },
   "devDependencies": {
     "eslint-plugin-import": "^2.7.0",
