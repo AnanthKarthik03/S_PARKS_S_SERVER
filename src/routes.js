@@ -8,16 +8,18 @@ var fs = require('fs')
 var excelToJson = require('convert-excel-to-json')
 const nodemailer = require('nodemailer')
 var _ = require('underscore-node')
+var request = require('request')
+
 
 const routes = [
   /* USERS */
   // authentication
   {
-    path: '/auth', 
-    method: 'POST', 
+    path: '/auth',
+    method: 'POST',
     handler: (request, reply) => {
       const { username, password } = request.payload
-      Knex('users').where({username}).select('password',  'name',  'email',  'mobile').then(([user]) => {
+      Knex('users').where({username}).select('password', 'name', 'email', 'mobile').then(([user]) => {
         if (!user) {
           reply({
             error: true,
@@ -32,13 +34,13 @@ const routes = [
           }
           if (res) {
             const token = jwt.sign(
-              {username}, 'vZiYpmTzqXMp8PpYXKwqc9ShQ1UhyAfy',  {
-                algorithm: 'HS256', 
+              {username}, 'vZiYpmTzqXMp8PpYXKwqc9ShQ1UhyAfy', {
+                algorithm: 'HS256',
                 expiresIn: '24h'
               })
 
             reply({
-              success: 'true', 
+              success: 'true',
               token: token,
               name: user.name,
               email: user.email,
@@ -56,8 +58,8 @@ const routes = [
 
   // Forget Password
   {
-    path: '/forget', 
-    method: 'POST', 
+    path: '/forget',
+    method: 'POST',
     handler: (request, reply) => {
       const { username } = request.payload
       Knex('users').where({username}).then(([user]) => {
@@ -80,7 +82,7 @@ const routes = [
           }
           if (hash) {
             Knex('users')
-              .where('username',  '=',  username)
+              .where('username', '=', username)
               .update({
                 password: hash
               }).then(count => {
@@ -90,15 +92,14 @@ const routes = [
 
                 // send sms
                 if (to && msg) {
-                  var request = require('request')
                   const url = 'http://login.smsmoon.com/API/sms.php'
                   const body = {
-                    'username': 'raghuedu', 
-                    'password': 'abcd.1234', 
-                    'from': 'RAGHUT', 
+                    'username': 'raghuedu',
+                    'password': 'abcd.1234',
+                    'from': 'RAGHUT',
                     'to': to,
                     'msg': msg,
-                    'type': '1', 
+                    'type': '1',
                     'dnd_check': '0'
                   }
 
@@ -106,7 +107,7 @@ const routes = [
                     form: body
                   }, function (error, response, body) {
                     if (!error && response.statusCode == 200) {
-                      console.log(body) // Print the google web page.
+                      // console.log(body) // Print the google web page.
 
                       reply({
                         success: true,
@@ -140,8 +141,8 @@ const routes = [
 
   // Profile
   {
-    path: '/profile', 
-    method: 'GET', 
+    path: '/profile',
+    method: 'GET',
     config: {
       auth: {
         strategy: 'token'
@@ -149,7 +150,7 @@ const routes = [
     },
     handler: (request, reply) => {
       let data = {username: request.auth.credentials.username}
-      Knex('users').select('username',  'name',  'mobile',  'email').where(data).then((results) => {
+      Knex('users').select('username', 'name', 'mobile', 'email').where(data).then((results) => {
         if (!results || results.length === 0) {
           reply({
             error: true,
@@ -169,8 +170,8 @@ const routes = [
 
   // Change Profile
   {
-    path: '/update_profile', 
-    method: 'POST', 
+    path: '/update_profile',
+    method: 'POST',
     config: {
       auth: {
         strategy: 'token'
@@ -222,7 +223,7 @@ const routes = [
         }
 
         Knex('users')
-          .where('username',  '=',  username)
+          .where('username', '=', username)
           .update(data).then(count => {
           if (count) {
             reply({
@@ -244,14 +245,14 @@ const routes = [
 
   /* Roster */
   {
-    path: '/upload_schedule', 
-    method: 'POST', 
+    path: '/upload_schedule',
+    method: 'POST',
     config: {
       auth: {
         strategy: 'token'
       },
       payload: {
-        output: 'stream', 
+        output: 'stream',
         parse: true,
         allow: 'multipart/form-data'
       },
@@ -266,13 +267,13 @@ const routes = [
 
           var file = fs.createWriteStream(newPath)
 
-          file.on('error',  function (err) {
+          file.on('error', function (err) {
             console.error(err)
           })
 
           data.file.pipe(file)
 
-          data.file.on('end',  function (err) {
+          data.file.on('end', function (err) {
             if (err) {
               reply({
                 success: false,
@@ -306,22 +307,25 @@ const routes = [
                 //   dept = row.C
                 // }
 
-                if (row.A && row.B && row.C && row.D && row.E && row.F && row.G && row.F.toString().indexOf('-') !== -1 && row.G.toString().indexOf('-') !== -1) {
+                if (row.A && row.B && row.C && row.D && row.E && row.F && row.G && row.H && row.G.toString().indexOf('-') !== -1 && row.H.toString().indexOf('-') !== -1) {
                   shifts.push({
                     emp_code: row.A.toString().trim(),
                     name: row.B.toString().trim(),
                     dept: row.C.toString().trim(),
-                    designation: row.D.toString().trim(), 
-                    shift: row.E.toString().trim(),
-                    shift_from: row.F.toString().trim(),
-                    shift_to: row.G.toString().trim()
+                    designation: row.D.toString().trim(),
+                    emp_type: row.E.toString().trim(),
+                    shift: row.F.toString().trim(),
+                    shift_from: row.G.toString().trim(),
+                    shift_to: row.H.toString().trim()
                   })
                 }
               }
             })
 
+            console.log(shifts.length)
+
             if (shifts.length) {
-              insertOrUpdate(Knex, 'shifts',  shifts).then((res) => {
+              insertOrUpdate(Knex, 'shifts', shifts).then((res) => {
                 reply({
                   success: true
                 })
@@ -332,6 +336,7 @@ const routes = [
                 })
               })
             } else {
+              console.log('not here')
               reply({
                 success: false,
                 error: 'No data imported, please check if the file is in correct format'
@@ -350,8 +355,8 @@ const routes = [
 
   // Shift Schedule
   {
-    path: '/shift_schedule', 
-    method: 'POST', 
+    path: '/shift_schedule',
+    method: 'POST',
     config: {
       auth: {
         strategy: 'token'
@@ -369,7 +374,7 @@ const routes = [
 
       let query = Knex.raw(`select emp_code, name, designation, shift, shift_from, shift_to, dept from shifts where shift_from <= '${date}' and shift_to >= '${date}' order by emp_code`)
 
-      console.log(query)
+      // console.log(query)
 
       query.then((results) => {
         if (!results || results[0].length === 0) {
@@ -392,56 +397,86 @@ const routes = [
 
   /* Dashboard - status */
   {
-    path: '/status', 
-    method: 'GET', 
+    path: '/status',
+    method: 'GET',
     handler: (request, reply) => {
       var params = request.query
-      var tm = request.query.tm
-      var to = request.query.to
-      var dept = request.query.dept
-      var query;
+      var tm = params.tm
+      var to = params.to
+      var dept = params.dept
+      var query
 
       // if dept is presnt, insrt values into table for email creation
       // CHANGE CLOSED TO 1 AFTER CODING IS DONE
-      if (dept) {
-          query = Knex.raw(`insert into email(dt, tm, deptname, shift, present, expected) (SELECT subdate(current_date, 1) as dt, ${tm} as tm, shifts.dept as deptname, data.shift, count(data.shift) as present, 
-          if (data.shift = 'a' and current_time >= '06:00' and current_time < '14:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname), 
-          if (data.shift = 'g' and current_time >= '08:30' and current_time < '17:30', (select count(*) as total from shifts where shift=data.shift  and dept=deptname),
-          if (data.shift = 'b' and current_time >= '14:00' and current_time < '22:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname ),
-          if (data.shift = 'e' and current_time >= '18:00' and current_time < '02:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname),
-          if (data.shift = 'c' and current_time >= '22:00' and current_time < '06:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname), 0))))) as expected FROM data 
-          inner join shifts on shifts.emp_code = data.emp_code
-          WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and  out_time is null group by data.shift, shifts.dept order by shift asc,present desc,expected desc)`)
+      // console.log('dept is', dept)
+      // console.log('tm is', tm)
 
-        query.then(result => {
+      if (dept) {
+        console.log(`in dept, ${tm}`)
+        var today = moment().format("YYYY-MM-DD")
+        var origtime = tm;
+        tm = today + ' ' + tm
+        var tm6 = today + ' 06:00:00'
+        var tm14 = today + ' 14:00:00'
+        var tm830 = today + ' 08:30:00'
+        var tm1730 = today + ' 17:30:00'
+        var tm1415 = today + ' 14:15:00'
+        var tm22 = today + ' 22:00:00'
+        var tm18 = today + ' 18:00:00'
+
+        var deptq = `insert into email(dt, tm, deptname, shift, emp_type, present, expected) (SELECT current_date as dt, '${origtime}' as tm, s.dept, s.shift, s.emp_type, count(d.emp_code) as present, if(s.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1),if(s.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1),if(s.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm1415}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1), if(s.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1),if(s.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1), 0))))) as expected FROM shifts s left join data d on d.emp_code = s.emp_code  where out_time is null group by s.dept, s.shift, s.emp_type order by dept)`
+
+
+        console.log(deptq)
+        Knex.raw(deptq).then(result => {
+
           reply({
             success: true,
-            result
-          })
+          result})
         })
       }
 
-      // if time is present as a parameter, sms will be sent
+      // used for sms
       if (tm) {
-        query = Knex.raw(`SELECT data.shift, count(data.shift) as present, if (data.shift = 'a' and current_time >= '06:00' and current_time <= '14:00', (select count(*) as total from shifts where shift=data.shift group by shift), if (data.shift = 'g' and current_time >= '08:30' and current_time <= '17:30', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'b' and current_time >= '14:00' and current_time <= '22:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'e' and current_time >= '18:00' and current_time <= '02:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'c' and current_time >= '22:00' and current_time <= '06:00', (select count(*) as total from shifts where shift=data.shift group by shift), 0))))) as expected FROM data WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and in_time <= '${tm}' and out_time is null group by data.shift`)
+        // var smsq = Knex.raw(`SELECT data.shift, count(data.shift) as present, if (data.shift = 'a' and '${tm}' >= '06:00' and '${tm}' <= '14:00', (select count(*) as total from shifts where shift=data.shift group by shift), if (data.shift = 'g' and '${tm}' >= '08:30' and '${tm}' <= '17:30', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'b' and '${tm}' >= '14:00' and '${tm}' <= '22:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'e' and '${tm}' >= '18:00', (select count(*) as total from shifts where shift=data.shift group by shift),if (data.shift = 'c' and '${tm}' >= '22:00', (select count(*) as total from shifts where shift=data.shift group by shift), 0))))) as expected FROM data WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and in_time <= '${tm}' and out_time is null group by data.shift`)
 
-        query.then(result => {
-          if(result[0].length) {
-            var message = '';
-            result[0].forEach(item=> {
+        var today = moment().format("YYYY-MM-DD")
+        // tm = today + ' ' + tm
+        var tm6 = today + ' 06:00:00'
+        var tm14 = today + ' 14:00:00'
+        var tm830 = today + ' 08:30:00'
+        var tm1730 = today + ' 17:30:00'
+        var tm1415 = today + ' 14:15:00'
+        var tm22 = today + ' 22:00:00'
+        var tm18 = today + ' 18:00:00'
+
+
+        // important: and time_to_sec(d.in_time) <= time_to_sec('${tm}')
+
+        var smsquery = (`SELECT s.shift, count(d.emp_code) as present, if(s.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift=s.shift), if(s.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift=s.shift), if(s.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=s.shift), if(s.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift=s.shift), if(s.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=s.shift), 0))))) as expected FROM shifts s left join data d on d.emp_code = s.emp_code  where out_time is null group by s.shift order by shift, dept`)
+
+        console.log('sms', smsquery)
+        
+        var smsq = Knex.raw(smsquery)
+        var message = ''
+
+        smsq.then(result => {
+          if (result[0].length) {
+            result[0].forEach(item => {
               message += item.shift + ' - ' + item.present + '/' + item.expected + '     '
             })
-            if (message){
+            if (message) {
               message = tm + ': ' + message.substr(0, message.length - 2)
               if (!to) {
-                to = '9885721144,9703400284'
-              }              
+                // 
+                to = '9885721144,9703400284,8500373704,9441604400,9491273518'
+              }
               if (to && message) {
                 Knex('sms').insert({mobile: to, message: message}).then(result => {
-                  console.log(result)
+                  // console.log(result)
                 })
-                console.log(`SMS sent: ${to}, ${message}`)
-                var request = require('request')
+                // console.log(`SMS sent: ${to}, ${message}`)
+                var request2 = require('request')
                 const url = 'http://login.smsmoon.com/API/sms.php'
                 const body = {
                   'username': 'raghuedu',
@@ -452,18 +487,19 @@ const routes = [
                   'type': '1',
                   'dnd_check': '0'
                 }
-            
-                request.post(url, {
-                  form: body
-                }, function (error, response, body) {
-                  if (!error && response.statusCode == 200) {
-                    console.log(body) // Print the google web page.
-                    reply({
-                      success: true,
-                      data: 'SMS sent successfully'
-                    })
-                  }
-                })
+
+                console.log('sms:', message)
+              request2.post(url, {
+                form: body
+              }, function (error, response, body) {
+                if (!error && response.statusCode == 200) {
+                  console.log(body) // Print the google web page.
+                  reply({
+                    success: true,
+                    data: 'SMS sent successfully'
+                  })
+                }
+              })
               } else {
                 reply({
                   success: false,
@@ -473,22 +509,32 @@ const routes = [
             }
           }
         })
-      } 
-      
+      }
+
       if (!dept && !tm) {
+        
+        /*
         query = Knex.raw(`SELECT shifts.dept as deptname, data.shift, count(data.shift) as present, 
-        if (data.shift = 'a' and current_time >= '06:00' and current_time < '14:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname), 
-        if (data.shift = 'g' and current_time >= '08:30' and current_time < '17:30', (select count(*) as total from shifts where shift=data.shift  and dept=deptname),
-        if (data.shift = 'b' and current_time >= '14:00' and current_time < '22:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname ),
-        if (data.shift = 'e' and current_time >= '18:00' and current_time < '02:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname),
-        if (data.shift = 'c' and current_time >= '22:00' and current_time < '06:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname), 0))))) as expected FROM data 
-        inner join shifts on shifts.emp_code = data.emp_code
-        WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and out_time is null group by data.shift, shifts.dept order by shift asc,present desc,expected desc`)
+        if (data.shift = 'a' and current_time >= '06:00' and current_time < '14:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE), 
+        if (data.shift = 'g' and current_time >= '08:30' and current_time < '17:30', (select count(*) as total from shifts where shift=data.shift  and dept=deptname and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE),
+        if (data.shift = 'b' and current_time >= '14:00' and current_time < '22:00', (select count(*) as total from shifts where shift=data.shift and dept=deptname and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE ),
+        if (data.shift = 'e' and current_time >= '18:00' and current_time < '02:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE),
+        if (data.shift = 'c' and current_time >= '22:00' and current_time < '06:00', (select count(*) as total from shifts where shift=data.shift  and dept=deptname and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE), 0))))) as expected FROM data 
+        inner join shifts on shifts.emp_code = data.emp_code and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE
+        WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and out_time is null and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE group by data.shift, shifts.dept order by shift asc,present desc,expected desc`)
+        */
+
+        query = Knex.raw(`select shifts.dept as deptname, shifts.shift, count(*) as expected, count(data.emp_code) as present from shifts left join data on data.out_time is null and data.emp_code = shifts.emp_code where shift_from <= current_date and shift_to >= current_date group by shifts.dept, shifts.shift order by shifts.shift, present, shifts.dept`)
+
+        
+        
+
 
         query.then((result) => {
           if (result[0].length) {
             reply({
               success: true,
+              update_tm: moment().format("YYYY-MM-DD HH:mm"),
               data: result[0]
             })
           } else {
@@ -499,39 +545,12 @@ const routes = [
           }
         })
       }
-  
-
- 
-    
-  }
-},
-
-  //////////////////////
-  /* Admin */
-  // Insert data
-  {
-    path: '/insertdata', 
-    method: 'GET', 
-    config: {
-      handler: (request, reply) => {
-        var params = request.query
-        var emp_code = params.emp_code
-        var time = params.time
-        var dt = params.dt
-
-        if (!emp_code || !dt || !time) {
-          reply({
-            success: false,
-            error: 'Please send both emp_code, dt and time'
-          })
-        } else {
-          Knex('data_live').insert({emp_code, dt, in_time: time}).then(function (result) {
-            reply({ success: true, message: result }) // respond back to request
-          })
-        }
-      }
     }
   },
+
+  // ////////////////////
+  /* Admin */
+  // Insert data
 
   // Temp Inserts
   {
@@ -539,3730 +558,176 @@ const routes = [
     method: 'GET',
     config: {
       handler: (request, reply) => {
-
-        var total = [
-          {emp_code: '80472', time: '5:40'},
-          {emp_code: '50526', time: '5:42'},
-          {emp_code: '80035', time: '5:43'},
-          {emp_code: '90039', time: '5:45'},
-          {emp_code: '12731', time: '5:46'},
-          {emp_code: '50510', time: '5:48'},
-          {emp_code: '50463', time: '5:48'},
-          {emp_code: '11489', time: '5:48'},
-          {emp_code: '50625', time: '5:48'},
-          {emp_code: '11312', time: '5:49'},
-          {emp_code: '90046', time: '5:49'},
-          {emp_code: '80976', time: '5:49'},
-          {emp_code: '80200', time: '5:49'},
-          {emp_code: '80975', time: '5:49'},
-          {emp_code: '80485', time: '5:49'},
-          {emp_code: '80059', time: '5:50'},
-          {emp_code: '80047', time: '5:50'},
-          {emp_code: '80218', time: '5:50'},
-          {emp_code: '50462', time: '5:50'},
-          {emp_code: '90069', time: '5:50'},
-          {emp_code: '81289', time: '5:50'},
-          {emp_code: '80711', time: '5:50'},
-          {emp_code: '80094', time: '5:50'},
-          {emp_code: '81290', time: '5:50'},
-          {emp_code: '80818', time: '5:50'},
-          {emp_code: '80477', time: '5:50'},
-          {emp_code: '81098', time: '5:50'},
-          {emp_code: '11449', time: '5:50'},
-          {emp_code: '81171', time: '5:51'},
-          {emp_code: '50654', time: '5:51'},
-          {emp_code: '12446', time: '5:51'},
-          {emp_code: '11043', time: '5:51'},
-          {emp_code: '81477', time: '5:51'},
-          {emp_code: '50753', time: '5:51'},
-          {emp_code: '13139', time: '5:51'},
-          {emp_code: '80675', time: '5:51'},
-          {emp_code: '80005', time: '5:51'},
-          {emp_code: '13160', time: '5:51'},
-          {emp_code: '80003', time: '5:51'},
-          {emp_code: '80046', time: '5:51'},
-          {emp_code: '80483', time: '5:52'},
-          {emp_code: '81125', time: '5:52'},
-          {emp_code: '12972', time: '5:52'},
-          {emp_code: '50650', time: '5:52'},
-          {emp_code: '80496', time: '5:52'},
-          {emp_code: '12817', time: '5:52'},
-          {emp_code: '81227', time: '5:52'},
-          {emp_code: '80736', time: '5:52'},
-          {emp_code: '50798', time: '5:52'},
-          {emp_code: '50639', time: '5:52'},
-          {emp_code: '80817', time: '5:52'},
-          {emp_code: '50653', time: '5:52'},
-          {emp_code: '13152', time: '5:52'},
-          {emp_code: '11304', time: '5:52'},
-          {emp_code: '50627', time: '5:52'},
-          {emp_code: '11652', time: '5:52'},
-          {emp_code: '13110', time: '5:52'},
-          {emp_code: '12709', time: '5:53'},
-          {emp_code: '81218', time: '5:53'},
-          {emp_code: '12730', time: '5:53'},
-          {emp_code: '12974', time: '5:53'},
-          {emp_code: '13104', time: '5:53'},
-          {emp_code: '50484', time: '5:53'},
-          {emp_code: '80064', time: '5:53'},
-          {emp_code: '80357', time: '5:53'},
-          {emp_code: '11062', time: '5:53'},
-          {emp_code: '80929', time: '5:53'},
-          {emp_code: '13140', time: '5:53'},
-          {emp_code: '80995', time: '5:53'},
-          {emp_code: '81346', time: '5:53'},
-          {emp_code: '50767', time: '5:53'},
-          {emp_code: '80750', time: '5:53'},
-          {emp_code: '11345', time: '5:53'},
-          {emp_code: '81486', time: '5:53'},
-          {emp_code: '13158', time: '5:53'},
-          {emp_code: '50601', time: '5:53'},
-          {emp_code: '80977', time: '5:53'},
-          {emp_code: '13150', time: '5:53'},
-          {emp_code: '81041', time: '5:53'},
-          {emp_code: '11269', time: '5:54'},
-          {emp_code: '12715', time: '5:54'},
-          {emp_code: '80077', time: '5:54'},
-          {emp_code: '13133', time: '5:54'},
-          {emp_code: '12710', time: '5:54'},
-          {emp_code: '81482', time: '5:54'},
-          {emp_code: '81485', time: '5:54'},
-          {emp_code: '12851', time: '5:54'},
-          {emp_code: '81484', time: '5:54'},
-          {emp_code: '81526', time: '5:54'},
-          {emp_code: '80992', time: '5:54'},
-          {emp_code: '12846', time: '5:54'},
-          {emp_code: '13142', time: '5:54'},
-          {emp_code: '50649', time: '5:54'},
-          {emp_code: '81430', time: '5:54'},
-          {emp_code: '81058', time: '5:54'},
-          {emp_code: '80709', time: '5:54'},
-          {emp_code: '81262', time: '5:55'},
-          {emp_code: '81088', time: '5:55'},
-          {emp_code: '81256', time: '5:55'},
-          {emp_code: '81087', time: '5:55'},
-          {emp_code: '81261', time: '5:55'},
-          {emp_code: '81449', time: '5:55'},
-          {emp_code: '80712', time: '5:55'},
-          {emp_code: '80927', time: '5:55'},
-          {emp_code: '13135', time: '5:55'},
-          {emp_code: '81338', time: '5:55'},
-          {emp_code: '81131', time: '5:55'},
-          {emp_code: '81344', time: '5:55'},
-          {emp_code: '12852', time: '5:55'},
-          {emp_code: '80006', time: '5:55'},
-          {emp_code: '13108', time: '5:55'},
-          {emp_code: '81468', time: '5:55'},
-          {emp_code: '12720', time: '5:55'},
-          {emp_code: '80267', time: '5:55'},
-          {emp_code: '50410', time: '5:55'},
-          {emp_code: '81505', time: '5:55'},
-          {emp_code: '80052', time: '5:55'},
-          {emp_code: '81506', time: '5:55'},
-          {emp_code: '80821', time: '5:55'},
-          {emp_code: '12129', time: '5:55'},
-          {emp_code: '80133', time: '5:55'},
-          {emp_code: '81248', time: '5:55'},
-          {emp_code: '90026', time: '5:55'},
-          {emp_code: '81220', time: '5:55'},
-          {emp_code: '81507', time: '5:55'},
-          {emp_code: '81469', time: '5:55'},
-          {emp_code: '12387', time: '5:56'},
-          {emp_code: '81132', time: '5:56'},
-          {emp_code: '80788', time: '5:56'},
-          {emp_code: '81508', time: '5:56'},
-          {emp_code: '90045', time: '5:56'},
-          {emp_code: '13111', time: '5:56'},
-          {emp_code: '81294', time: '5:56'},
-          {emp_code: '80820', time: '5:56'},
-          {emp_code: '12949', time: '5:56'},
-          {emp_code: '13153', time: '5:56'},
-          {emp_code: '11342', time: '5:56'},
-          {emp_code: '80899', time: '5:56'},
-          {emp_code: '80773', time: '5:56'},
-          {emp_code: '90064', time: '5:56'},
-          {emp_code: '81359', time: '5:56'},
-          {emp_code: '81282', time: '5:56'},
-          {emp_code: '81159', time: '5:56'},
-          {emp_code: '80092', time: '5:56'},
-          {emp_code: '80900', time: '5:56'},
-          {emp_code: '81361', time: '5:56'},
-          {emp_code: '80854', time: '5:56'},
-          {emp_code: '12727', time: '5:56'},
-          {emp_code: '12923', time: '5:56'},
-          {emp_code: '81360', time: '5:56'},
-          {emp_code: '81235', time: '5:56'},
-          {emp_code: '12073', time: '5:56'},
-          {emp_code: '81130', time: '5:57'},
-          {emp_code: '50454', time: '5:57'},
-          {emp_code: '81528', time: '5:57'},
-          {emp_code: '80884', time: '5:57'},
-          {emp_code: '50548', time: '5:57'},
-          {emp_code: '13134', time: '5:57'},
-          {emp_code: '81353', time: '5:57'},
-          {emp_code: '80102', time: '5:57'},
-          {emp_code: '81511', time: '5:57'},
-          {emp_code: '80106', time: '5:57'},
-          {emp_code: '13116', time: '5:57'},
-          {emp_code: '80800', time: '5:57'},
-          {emp_code: '50755', time: '5:57'},
-          {emp_code: '80953', time: '5:57'},
-          {emp_code: '81310', time: '5:57'},
-          {emp_code: '50409', time: '5:57'},
-          {emp_code: '81311', time: '5:57'},
-          {emp_code: '50804', time: '5:57'},
-          {emp_code: '81527', time: '5:57'},
-          {emp_code: '50560', time: '5:57'},
-          {emp_code: '80732', time: '5:57'},
-          {emp_code: '80728', time: '5:57'},
-          {emp_code: '81133', time: '5:57'},
-          {emp_code: '11671', time: '5:58'},
-          {emp_code: '81542', time: '5:58'},
-          {emp_code: '13130', time: '5:58'},
-          {emp_code: '90059', time: '5:58'},
-          {emp_code: '50799', time: '5:58'},
-          {emp_code: '10955', time: '5:58'},
-          {emp_code: '11210', time: '5:58'},
-          {emp_code: '50512', time: '5:58'},
-          {emp_code: '90040', time: '5:58'},
-          {emp_code: '81322', time: '5:58'},
-          {emp_code: '81320', time: '5:58'},
-          {emp_code: '81457', time: '5:58'},
-          {emp_code: '81487', time: '5:58'},
-          {emp_code: '12719', time: '5:58'},
-          {emp_code: '81429', time: '5:58'},
-          {emp_code: '50404', time: '5:58'},
-          {emp_code: '81458', time: '5:58'},
-          {emp_code: '81456', time: '5:59'},
-          {emp_code: '81514', time: '5:59'},
-          {emp_code: '12729', time: '5:59'},
-          {emp_code: '81496', time: '5:59'},
-          {emp_code: '11887', time: '5:59'},
-          {emp_code: '50772', time: '5:59'},
-          {emp_code: '81026', time: '5:59'},
-          {emp_code: '12318', time: '5:59'},
-          {emp_code: '50166', time: '5:59'},
-          {emp_code: '12708', time: '5:59'},
-          {emp_code: '50768', time: '5:59'},
-          {emp_code: '81536', time: '5:59'},
-          {emp_code: '81535', time: '5:59'},
-          {emp_code: '12430', time: '5:59'},
-          {emp_code: '81321', time: '5:59'},
-          {emp_code: '81148', time: '5:59'},
-          {emp_code: '81035', time: '5:59'},
-          {emp_code: '81222', time: '5:59'},
-          {emp_code: '50663', time: '5:59'},
-          {emp_code: '81223', time: '5:59'},
-          {emp_code: '81158', time: '5:59'},
-          {emp_code: '80330', time: '5:59'},
-          {emp_code: '10833', time: '6:00'},
-          {emp_code: '80050', time: '6:00'},
-          {emp_code: '11418', time: '6:00'},
-          {emp_code: '50382', time: '6:00'},
-          {emp_code: '13154', time: '6:00'},
-          {emp_code: '50516', time: '6:00'},
-          {emp_code: '80939', time: '6:00'},
-          {emp_code: '81246', time: '6:01'},
-          {emp_code: '81543', time: '6:01'},
-          {emp_code: '81063', time: '6:01'},
-          {emp_code: '81541', time: '6:01'},
-          {emp_code: '81242', time: '6:01'},
-          {emp_code: '10947', time: '6:01'},
-          {emp_code: '81495', time: '6:01'},
-          {emp_code: '50660', time: '6:01'},
-          {emp_code: '12859', time: '6:01'},
-          {emp_code: '81544', time: '6:01'},
-          {emp_code: '80153', time: '6:02'},
-          {emp_code: '50133', time: '6:02'},
-          {emp_code: '80525', time: '6:02'},
-          {emp_code: '11048', time: '6:03'},
-          {emp_code: '50519', time: '6:03'},
-          {emp_code: '50658', time: '6:04'},
-          {emp_code: '80001', time: '6:05'},
-          {emp_code: '80093', time: '6:07'},
-          {emp_code: '13178', time: '6:11'},
-          {emp_code: '81425', time: '6:12'},
-          {emp_code: '11447', time: '6:13'},
-          {emp_code: '80481', time: '6:31'},
-          {emp_code: '50408', time: '6:35'},
-          {emp_code: '80488', time: '6:58'},
-          {emp_code: '81291', time: '7:02'},
-          {emp_code: '80082', time: '7:34'},
-          {emp_code: '50203', time: '7:46'},
-          {emp_code: '80058', time: '7:47'},
-          {emp_code: '80053', time: '7:52'},
-          {emp_code: '81210', time: '7:52'},
-          {emp_code: '12843', time: '7:53'},
-          {emp_code: '50603', time: '7:53'},
-          {emp_code: '81196', time: '7:53'},
-          {emp_code: '13045', time: '7:53'},
-          {emp_code: '50628', time: '7:53'},
-          {emp_code: '13113', time: '7:53'},
-          {emp_code: '81499', time: '7:53'},
-          {emp_code: '50633', time: '7:53'},
-          {emp_code: '81498', time: '7:53'},
-          {emp_code: '80743', time: '7:53'},
-          {emp_code: '80742', time: '7:53'},
-          {emp_code: '80741', time: '7:54'},
-          {emp_code: '13122', time: '7:54'},
-          {emp_code: '80097', time: '7:54'},
-          {emp_code: '81211', time: '7:54'},
-          {emp_code: '81234', time: '7:54'},
-          {emp_code: '80671', time: '7:54'},
-          {emp_code: '80931', time: '7:54'},
-          {emp_code: '81209', time: '7:54'},
-          {emp_code: '81212', time: '7:54'},
-          {emp_code: '81213', time: '7:54'},
-          {emp_code: '81464', time: '7:54'},
-          {emp_code: '81312', time: '7:54'},
-          {emp_code: '81478', time: '7:54'},
-          {emp_code: '80669', time: '7:54'},
-          {emp_code: '81350', time: '7:54'},
-          {emp_code: '50518', time: '7:54'},
-          {emp_code: '11453', time: '7:54'},
-          {emp_code: '81434', time: '7:54'},
-          {emp_code: '81347', time: '7:54'},
-          {emp_code: '81183', time: '7:54'},
-          {emp_code: '81236', time: '7:54'},
-          {emp_code: '81033', time: '7:54'},
-          {emp_code: '13123', time: '7:55'},
-          {emp_code: '81032', time: '7:55'},
-          {emp_code: '13121', time: '7:55'},
-          {emp_code: '13120', time: '7:55'},
-          {emp_code: '50099', time: '7:55'},
-          {emp_code: '81034', time: '7:55'},
-          {emp_code: '50515', time: '7:55'},
-          {emp_code: '81198', time: '7:56'},
-          {emp_code: '81195', time: '7:56'},
-          {emp_code: '12614', time: '7:56'},
-          {emp_code: '80484', time: '7:56'},
-          {emp_code: '50106', time: '7:57'},
-          {emp_code: '12575', time: '7:57'},
-          {emp_code: '50397', time: '7:57'},
-          {emp_code: '11987', time: '7:57'},
-          {emp_code: '80891', time: '7:57'},
-          {emp_code: '81204', time: '7:57'},
-          {emp_code: '80890', time: '7:57'},
-          {emp_code: '12443', time: '7:57'},
-          {emp_code: '12561', time: '7:57'},
-          {emp_code: '81231', time: '7:57'},
-          {emp_code: '81147', time: '7:57'},
-          {emp_code: '12920', time: '7:57'},
-          {emp_code: '81205', time: '7:57'},
-          {emp_code: '80672', time: '7:57'},
-          {emp_code: '81199', time: '7:57'},
-          {emp_code: '50482', time: '7:57'},
-          {emp_code: '80680', time: '7:58'},
-          {emp_code: '81252', time: '7:58'},
-          {emp_code: '13105', time: '7:58'},
-          {emp_code: '50109', time: '7:58'},
-          {emp_code: '12106', time: '7:58'},
-          {emp_code: '50304', time: '7:58'},
-          {emp_code: '50091', time: '7:58'},
-          {emp_code: '50111', time: '7:58'},
-          {emp_code: '11044', time: '7:58'},
-          {emp_code: '50147', time: '7:58'},
-          {emp_code: '80662', time: '7:58'},
-          {emp_code: '80819', time: '7:58'},
-          {emp_code: '12317', time: '7:58'},
-          {emp_code: '13118', time: '7:58'},
-          {emp_code: '80673', time: '7:58'},
-          {emp_code: '81175', time: '7:58'},
-          {emp_code: '50420', time: '7:59'},
-          {emp_code: '50352', time: '7:59'},
-          {emp_code: '50547', time: '7:59'},
-          {emp_code: '81480', time: '7:59'},
-          {emp_code: '50334', time: '7:59'},
-          {emp_code: '50118', time: '7:59'},
-          {emp_code: '11271', time: '7:59'},
-          {emp_code: '50453', time: '7:59'},
-          {emp_code: '11440', time: '7:59'},
-          {emp_code: '12995', time: '7:59'},
-          {emp_code: '50381', time: '7:59'},
-          {emp_code: '81343', time: '7:59'},
-          {emp_code: '81295', time: '7:59'},
-          {emp_code: '80190', time: '7:59'},
-          {emp_code: '80688', time: '7:59'},
-          {emp_code: '50456', time: '8:00'},
-          {emp_code: '50079', time: '8:00'},
-          {emp_code: '50113', time: '8:00'},
-          {emp_code: '50185', time: '8:00'},
-          {emp_code: '50763', time: '8:00'},
-          {emp_code: '50309', time: '8:00'},
-          {emp_code: '90060', time: '8:00'},
-          {emp_code: '50168', time: '8:01'},
-          {emp_code: '50092', time: '8:01'},
-          {emp_code: '50117', time: '8:01'},
-          {emp_code: '50805', time: '8:01'},
-          {emp_code: '50097', time: '8:01'},
-          {emp_code: '12305', time: '8:01'},
-          {emp_code: '12175', time: '8:01'},
-          {emp_code: '50167', time: '8:01'},
-          {emp_code: '12067', time: '8:01'},
-          {emp_code: '13145', time: '8:01'},
-          {emp_code: '50123', time: '8:01'},
-          {emp_code: '50100', time: '8:01'},
-          {emp_code: '50169', time: '8:01'},
-          {emp_code: '12903', time: '8:01'},
-          {emp_code: '12148', time: '8:01'},
-          {emp_code: '12429', time: '8:01'},
-          {emp_code: '12889', time: '8:01'},
-          {emp_code: '81111', time: '8:02'},
-          {emp_code: '13018', time: '8:02'},
-          {emp_code: '50554', time: '8:02'},
-          {emp_code: '12893', time: '8:02'},
-          {emp_code: '50582', time: '8:02'},
-          {emp_code: '13132', time: '8:02'},
-          {emp_code: '50640', time: '8:02'},
-          {emp_code: '80770', time: '8:02'},
-          {emp_code: '12723', time: '8:02'},
-          {emp_code: '12155', time: '8:02'},
-          {emp_code: '81334', time: '8:02'},
-          {emp_code: '12234', time: '8:02'},
-          {emp_code: '80739', time: '8:02'},
-          {emp_code: '12158', time: '8:02'},
-          {emp_code: '50689', time: '8:02'},
-          {emp_code: '12351', time: '8:02'},
-          {emp_code: '13117', time: '8:02'},
-          {emp_code: '50412', time: '8:02'},
-          {emp_code: '12996', time: '8:02'},
-          {emp_code: '50771', time: '8:02'},
-          {emp_code: '50433', time: '8:02'},
-          {emp_code: '50114', time: '8:02'},
-          {emp_code: '80661', time: '8:02'},
-          {emp_code: '80747', time: '8:02'},
-          {emp_code: '12358', time: '8:02'},
-          {emp_code: '50829', time: '8:02'},
-          {emp_code: '13141', time: '8:02'},
-          {emp_code: '12546', time: '8:02'},
-          {emp_code: '50101', time: '8:02'},
-          {emp_code: '80768', time: '8:03'},
-          {emp_code: '50765', time: '8:03'},
-          {emp_code: '12037', time: '8:03'},
-          {emp_code: '12431', time: '8:03'},
-          {emp_code: '12006', time: '8:03'},
-          {emp_code: '12183', time: '8:03'},
-          {emp_code: '80765', time: '8:03'},
-          {emp_code: '50550', time: '8:03'},
-          {emp_code: '12948', time: '8:03'},
-          {emp_code: '81432', time: '8:03'},
-          {emp_code: '50059', time: '8:03'},
-          {emp_code: '81431', time: '8:03'},
-          {emp_code: '80797', time: '8:04'},
-          {emp_code: '50673', time: '8:05'},
-          {emp_code: '50553', time: '8:05'},
-          {emp_code: '50470', time: '8:05'},
-          {emp_code: '50440', time: '8:06'},
-          {emp_code: '50609', time: '8:06'},
-          {emp_code: '50483', time: '8:07'},
-          {emp_code: '13094', time: '8:07'},
-          {emp_code: '50354', time: '8:07'},
-          {emp_code: '50815', time: '8:10'},
-          {emp_code: '50538', time: '8:10'},
-          {emp_code: '50335', time: '8:10'},
-          {emp_code: '80885', time: '8:10'},
-          {emp_code: '50108', time: '8:10'},
-          {emp_code: '50437', time: '8:10'},
-          {emp_code: '13127', time: '8:10'},
-          {emp_code: '90034', time: '8:10'},
-          {emp_code: '11072', time: '8:10'},
-          {emp_code: '13151', time: '8:10'},
-          {emp_code: '81433', time: '8:10'},
-          {emp_code: '50641', time: '8:10'},
-          {emp_code: '50620', time: '8:10'},
-          {emp_code: '50383', time: '8:10'},
-          {emp_code: '50183', time: '8:11'},
-          {emp_code: '50379', time: '8:11'},
-          {emp_code: '50622', time: '8:11'},
-          {emp_code: '50395', time: '8:11'},
-          {emp_code: '50896', time: '8:11'},
-          {emp_code: '50527', time: '8:11'},
-          {emp_code: '11618', time: '8:11'},
-          {emp_code: '81206', time: '8:11'},
-          {emp_code: '81200', time: '8:11'},
-          {emp_code: '50347', time: '8:11'},
-          {emp_code: '50093', time: '8:11'},
-          {emp_code: '50384', time: '8:11'},
-          {emp_code: '50623', time: '8:11'},
-          {emp_code: '50605', time: '8:12'},
-          {emp_code: '80009', time: '8:12'},
-          {emp_code: '80074', time: '8:12'},
-          {emp_code: '50451', time: '8:13'},
-          {emp_code: '50485', time: '8:13'},
-          {emp_code: '50468', time: '8:13'},
-          {emp_code: '50486', time: '8:13'},
-          {emp_code: '50429', time: '8:13'},
-          {emp_code: '12026', time: '8:14'},
-          {emp_code: '50327', time: '8:14'},
-          {emp_code: '11014', time: '8:14'},
-          {emp_code: '50513', time: '8:14'},
-          {emp_code: '50795', time: '8:14'},
-          {emp_code: '50469', time: '8:14'},
-          {emp_code: '12728', time: '8:14'},
-          {emp_code: '90032', time: '8:14'},
-          {emp_code: '90020', time: '8:14'},
-          {emp_code: '50493', time: '8:15'},
-          {emp_code: '50071', time: '8:15'},
-          {emp_code: '50666', time: '8:15'},
-          {emp_code: '50036', time: '8:15'},
-          {emp_code: '50077', time: '8:16'},
-          {emp_code: '50320', time: '8:16'},
-          {emp_code: '50170', time: '8:16'},
-          {emp_code: '12010', time: '8:17'},
-          {emp_code: '11889', time: '8:17'},
-          {emp_code: '50648', time: '8:17'},
-          {emp_code: '50130', time: '8:17'},
-          {emp_code: '80041', time: '8:17'},
-          {emp_code: '50094', time: '8:18'},
-          {emp_code: '11334', time: '8:20'},
-          {emp_code: '50632', time: '8:21'},
-          {emp_code: '50121', time: '8:21'},
-          {emp_code: '50180', time: '8:22'},
-          {emp_code: '50323', time: '8:23'},
-          {emp_code: '50501', time: '8:23'},
-          {emp_code: '50350', time: '8:23'},
-          {emp_code: '50686', time: '8:23'},
-          {emp_code: '50083', time: '8:23'},
-          {emp_code: '50348', time: '8:23'},
-          {emp_code: '11518', time: '8:23'},
-          {emp_code: '50444', time: '8:23'},
-          {emp_code: '50110', time: '8:23'},
-          {emp_code: '50128', time: '8:23'},
-          {emp_code: '50610', time: '8:23'},
-          {emp_code: '12825', time: '8:23'},
-          {emp_code: '11157', time: '8:23'},
-          {emp_code: '12579', time: '8:23'},
-          {emp_code: '50182', time: '8:23'},
-          {emp_code: '50333', time: '8:23'},
-          {emp_code: '50041', time: '8:23'},
-          {emp_code: '50368', time: '8:24'},
-          {emp_code: '50500', time: '8:24'},
-          {emp_code: '80921', time: '8:24'},
-          {emp_code: '50536', time: '8:24'},
-          {emp_code: '80476', time: '8:24'},
-          {emp_code: '50475', time: '8:24'},
-          {emp_code: '50662', time: '8:25'},
-          {emp_code: '50086', time: '8:25'},
-          {emp_code: '50049', time: '8:25'},
-          {emp_code: '50390', time: '8:25'},
-          {emp_code: '50186', time: '8:25'},
-          {emp_code: '50385', time: '8:25'},
-          {emp_code: '50126', time: '8:25'},
-          {emp_code: '50058', time: '8:25'},
-          {emp_code: '50602', time: '8:25'},
-          {emp_code: '50436', time: '8:25'},
-          {emp_code: '50430', time: '8:25'},
-          {emp_code: '50421', time: '8:25'},
-          {emp_code: '50597', time: '8:26'},
-          {emp_code: '80108', time: '8:26'},
-          {emp_code: '11452', time: '8:26'},
-          {emp_code: '50629', time: '8:26'},
-          {emp_code: '50405', time: '8:26'},
-          {emp_code: '50401', time: '8:27'},
-          {emp_code: '50634', time: '8:27'},
-          {emp_code: '50599', time: '8:27'},
-          {emp_code: '81007', time: '8:28'},
-          {emp_code: '50595', time: '8:28'},
-          {emp_code: '50391', time: '8:28'},
-          {emp_code: '50089', time: '8:28'},
-          {emp_code: '50137', time: '8:28'},
-          {emp_code: '50671', time: '8:29'},
-          {emp_code: '50362', time: '8:29'},
-          {emp_code: '00016', time: '8:30'},
-          {emp_code: '50047', time: '8:30'},
-          {emp_code: '50129', time: '8:30'},
-          {emp_code: '50139', time: '8:30'},
-          {emp_code: '50201', time: '8:30'},
-          {emp_code: '50300', time: '8:30'},
-          {emp_code: '50331', time: '8:30'},
-          {emp_code: '50539', time: '8:30'},
-          {emp_code: '50757', time: '8:30'},
-          {emp_code: '50756', time: '8:30'},
-          {emp_code: '50386', time: '9:01'},
-          {emp_code: '50672', time: '10:17'},
-          {emp_code: '50318', time: '10:25'},
-          {emp_code: '80933', time: '10:34'},
-          {emp_code: '50400', time: '13:38'},
-          {emp_code: '11198', time: '13:39'},
-          {emp_code: '11377', time: '13:41'},
-          {emp_code: '81013', time: '13:43'},
-          {emp_code: '11595', time: '13:45'},
-          {emp_code: '80191', time: '13:45'},
-          {emp_code: '50656', time: '13:47'},
-          {emp_code: '81005', time: '13:48'},
-          {emp_code: '50657', time: '13:48'},
-          {emp_code: '80051', time: '13:48'},
-          {emp_code: '50766', time: '13:48'},
-          {emp_code: '81038', time: '13:49'},
-          {emp_code: '50751', time: '13:49'},
-          {emp_code: '50455', time: '13:49'},
-          {emp_code: '80045', time: '13:49'},
-          {emp_code: '80816', time: '13:49'},
-          {emp_code: '50682', time: '13:49'},
-          {emp_code: '81413', time: '13:49'},
-          {emp_code: '12712', time: '13:50'},
-          {emp_code: '50596', time: '13:50'},
-          {emp_code: '11551', time: '13:50'},
-          {emp_code: '11118', time: '13:50'},
-          {emp_code: '80930', time: '13:50'},
-          {emp_code: '12722', time: '13:50'},
-          {emp_code: '81020', time: '13:50'},
-          {emp_code: '11054', time: '13:50'},
-          {emp_code: '81078', time: '13:50'},
-          {emp_code: '81022', time: '13:51'},
-          {emp_code: '81285', time: '13:51'},
-          {emp_code: '80667', time: '13:51'},
-          {emp_code: '80007', time: '13:51'},
-          {emp_code: '81036', time: '13:51'},
-          {emp_code: '50652', time: '13:51'},
-          {emp_code: '81376', time: '13:51'},
-          {emp_code: '50466', time: '13:51'},
-          {emp_code: '81375', time: '13:51'},
-          {emp_code: '81374', time: '13:51'},
-          {emp_code: '13099', time: '13:51'},
-          {emp_code: '80704', time: '13:51'},
-          {emp_code: '13097', time: '13:52'},
-          {emp_code: '80845', time: '13:52'},
-          {emp_code: '80841', time: '13:52'},
-          {emp_code: '13102', time: '13:52'},
-          {emp_code: '80842', time: '13:52'},
-          {emp_code: '13041', time: '13:52'},
-          {emp_code: '80067', time: '13:52'},
-          {emp_code: '50669', time: '13:52'},
-          {emp_code: '80686', time: '13:52'},
-          {emp_code: '81268', time: '13:52'},
-          {emp_code: '81517', time: '13:52'},
-          {emp_code: '13146', time: '13:52'},
-          {emp_code: '80668', time: '13:52'},
-          {emp_code: '80875', time: '13:52'},
-          {emp_code: '90077', time: '13:52'},
-          {emp_code: '81308', time: '13:52'},
-          {emp_code: '12587', time: '13:52'},
-          {emp_code: '80004', time: '13:52'},
-          {emp_code: '13164', time: '13:53'},
-          {emp_code: '80008', time: '13:53'},
-          {emp_code: '13115', time: '13:53'},
-          {emp_code: '80733', time: '13:53'},
-          {emp_code: '90071', time: '13:53'},
-          {emp_code: '81298', time: '13:53'},
-          {emp_code: '81286', time: '13:53'},
-          {emp_code: '81530', time: '13:53'},
-          {emp_code: '50509', time: '13:53'},
-          {emp_code: '80076', time: '13:53'},
-          {emp_code: '50471', time: '13:53'},
-          {emp_code: '13096', time: '13:53'},
-          {emp_code: '81339', time: '13:53'},
-          {emp_code: '13081', time: '13:53'},
-          {emp_code: '81251', time: '13:53'},
-          {emp_code: '81103', time: '13:53'},
-          {emp_code: '80684', time: '13:53'},
-          {emp_code: '81221', time: '13:53'},
-          {emp_code: '80612', time: '13:53'},
-          {emp_code: '81233', time: '13:54'},
-          {emp_code: '81497', time: '13:54'},
-          {emp_code: '50502', time: '13:54'},
-          {emp_code: '81500', time: '13:54'},
-          {emp_code: '50399', time: '13:54'},
-          {emp_code: '50803', time: '13:54'},
-          {emp_code: '81501', time: '13:54'},
-          {emp_code: '80705', time: '13:54'},
-          {emp_code: '80703', time: '13:54'},
-          {emp_code: '81328', time: '13:54'},
-          {emp_code: '81512', time: '13:54'},
-          {emp_code: '81327', time: '13:54'},
-          {emp_code: '50608', time: '13:54'},
-          {emp_code: '81335', time: '13:54'},
-          {emp_code: '81513', time: '13:54'},
-          {emp_code: '81502', time: '13:54'},
-          {emp_code: '81479', time: '13:54'},
-          {emp_code: '81503', time: '13:55'},
-          {emp_code: '80049', time: '13:55'},
-          {emp_code: '13131', time: '13:55'},
-          {emp_code: '81515', time: '13:55'},
-          {emp_code: '80065', time: '13:56'},
-          {emp_code: '90047', time: '13:56'},
-          {emp_code: '80101', time: '13:56'},
-          {emp_code: '81518', time: '13:56'},
-          {emp_code: '50801', time: '13:56'},
-          {emp_code: '12585', time: '13:56'},
-          {emp_code: '50127', time: '13:57'},
-          {emp_code: '50131', time: '13:57'},
-          {emp_code: '80729', time: '13:57'},
-          {emp_code: '80889', time: '13:57'},
-          {emp_code: '50413', time: '13:57'},
-          {emp_code: '50667', time: '13:57'},
-          {emp_code: '50403', time: '13:57'},
-          {emp_code: '81303', time: '13:57'},
-          {emp_code: '81126', time: '13:57'},
-          {emp_code: '12963', time: '13:57'},
-          {emp_code: '13157', time: '13:58'},
-          {emp_code: '90029', time: '13:58'},
-          {emp_code: '11165', time: '13:58'},
-          {emp_code: '80075', time: '13:58'},
-          {emp_code: '12108', time: '13:58'},
-          {emp_code: '81155', time: '13:58'},
-          {emp_code: '13136', time: '13:58'},
-          {emp_code: '81160', time: '13:59'},
-          {emp_code: '50668', time: '13:59'},
-          {emp_code: '11172', time: '13:59'},
-          {emp_code: '81156', time: '13:59'},
-          {emp_code: '50752', time: '13:59'},
-          {emp_code: '50406', time: '13:59'},
-          {emp_code: '11485', time: '13:59'},
-          {emp_code: '13029', time: '13:59'},
-          {emp_code: '50655', time: '13:59'},
-          {emp_code: '80489', time: '13:59'},
-          {emp_code: '50559', time: '13:59'},
-          {emp_code: '81146', time: '13:59'},
-          {emp_code: '13180', time: '13:59'},
-          {emp_code: '81002', time: '13:59'},
-          {emp_code: '13100', time: '13:59'},
-          {emp_code: '81363', time: '14:00'},
-          {emp_code: '13148', time: '14:00'},
-          {emp_code: '13155', time: '14:00'},
-          {emp_code: '81364', time: '14:00'},
-          {emp_code: '11661', time: '14:00'},
-          {emp_code: '50134', time: '14:00'},
-          {emp_code: '50600', time: '14:00'},
-          {emp_code: '81304', time: '14:01'},
-          {emp_code: '81309', time: '14:01'},
-          {emp_code: '80793', time: '14:01'},
-          {emp_code: '50514', time: '14:01'},
-          {emp_code: '12211', time: '14:06'},
-          {emp_code: '81534', time: '14:10'},
-          {emp_code: '81538', time: '14:10'},
-          {emp_code: '81537', time: '14:10'},
-          {emp_code: '13183', time: '14:15'},
-          {emp_code: '50809', time: '14:17'},
-          {emp_code: '11311', time: '14:19'},
-          {emp_code: '50132', time: '14:23'},
-          {emp_code: '50411', time: '17:11'},
-          {emp_code: '50687', time: '17:15'},
-          {emp_code: '80780', time: '17:26'},
-          {emp_code: '11576', time: '17:29'},
-          {emp_code: '80974', time: '17:44'},
-          {emp_code: '80060', time: '17:51'},
-          {emp_code: '11361', time: '17:51'},
-          {emp_code: '90009', time: '17:51'},
-          {emp_code: '90068', time: '17:51'},
-          {emp_code: '13073', time: '17:52'},
-          {emp_code: '80313', time: '17:52'},
-          {emp_code: '11717', time: '17:52'},
-          {emp_code: '11983', time: '17:52'},
-          {emp_code: '11438', time: '17:52'},
-          {emp_code: '80756', time: '17:52'},
-          {emp_code: '11332', time: '17:53'},
-          {emp_code: '80192', time: '17:53'},
-          {emp_code: '81075', time: '17:53'},
-          {emp_code: '12786', time: '17:53'},
-          {emp_code: '11753', time: '17:53'},
-          {emp_code: '80042', time: '17:53'},
-          {emp_code: '81060', time: '17:53'},
-          {emp_code: '81050', time: '17:53'},
-          {emp_code: '11645', time: '17:53'},
-          {emp_code: '11716', time: '17:53'},
-          {emp_code: '12711', time: '17:53'},
-          {emp_code: '80027', time: '17:53'},
-          {emp_code: '11747', time: '17:53'},
-          {emp_code: '81090', time: '17:54'},
-          {emp_code: '80012', time: '17:54'},
-          {emp_code: '81243', time: '17:54'},
-          {emp_code: '81446', time: '17:54'},
-          {emp_code: '81453', time: '17:54'},
-          {emp_code: '80753', time: '17:54'},
-          {emp_code: '90079', time: '17:54'},
-          {emp_code: '11649', time: '17:54'},
-          {emp_code: '90062', time: '17:55'},
-          {emp_code: '80098', time: '17:55'},
-          {emp_code: '50398', time: '17:57'},
-          {emp_code: '80838', time: '17:57'},
-          {emp_code: '81082', time: '17:57'},
-          {emp_code: '81072', time: '17:58'},
-          {emp_code: '80999', time: '17:58'},
-          {emp_code: '81024', time: '17:58'},
-          {emp_code: '81190', time: '17:58'},
-          {emp_code: '81463', time: '17:58'},
-          {emp_code: '81462', time: '17:59'},
-          {emp_code: '81170', time: '17:59'},
-          {emp_code: '00013', time: '18:00'},
-          {emp_code: '80181', time: '18:02'},
-          {emp_code: '11443', time: '18:02'},
-          {emp_code: '12714', time: '18:05'},
-          {emp_code: '12224', time: '18:12'},
-          {emp_code: '13114', time: '18:12'},
-          {emp_code: '81027', time: '20:02'},
-          {emp_code: '12716', time: '20:59'},
-          {emp_code: '50561', time: '21:41'},
-          {emp_code: '50506', time: '21:43'},
-          {emp_code: '81012', time: '21:44'},
-          {emp_code: '81037', time: '21:45'},
-          {emp_code: '80479', time: '21:45'},
-          {emp_code: '12717', time: '21:46'},
-          {emp_code: '12725', time: '21:46'},
-          {emp_code: '50647', time: '21:48'},
-          {emp_code: '80683', time: '21:49'},
-          {emp_code: '81293', time: '21:49'},
-          {emp_code: '81300', time: '21:49'},
-          {emp_code: '80882', time: '21:49'},
-          {emp_code: '80883', time: '21:49'},
-          {emp_code: '80881', time: '21:49'},
-          {emp_code: '80852', time: '21:49'},
-          {emp_code: '13109', time: '21:49'},
-          {emp_code: '80702', time: '21:49'},
-          {emp_code: '81186', time: '21:50'},
-          {emp_code: '13144', time: '21:50'},
-          {emp_code: '11333', time: '21:50'},
-          {emp_code: '81411', time: '21:50'},
-          {emp_code: '80096', time: '21:50'},
-          {emp_code: '90035', time: '21:50'},
-          {emp_code: '13173', time: '21:50'},
-          {emp_code: '81337', time: '21:50'},
-          {emp_code: '11255', time: '21:50'},
-          {emp_code: '80961', time: '21:50'},
-          {emp_code: '81522', time: '21:50'},
-          {emp_code: '81519', time: '21:50'},
-          {emp_code: '81149', time: '21:50'},
-          {emp_code: '81144', time: '21:50'},
-          {emp_code: '81154', time: '21:50'},
-          {emp_code: '12021', time: '21:50'},
-          {emp_code: '80061', time: '21:50'},
-          {emp_code: '50465', time: '21:50'},
-          {emp_code: '11648', time: '21:50'},
-          {emp_code: '81521', time: '21:50'},
-          {emp_code: '11215', time: '21:50'},
-          {emp_code: '50624', time: '21:50'},
-          {emp_code: '80988', time: '21:50'},
-          {emp_code: '12386', time: '21:50'},
-          {emp_code: '12718', time: '21:50'},
-          {emp_code: '81141', time: '21:50'},
-          {emp_code: '81077', time: '21:50'},
-          {emp_code: '50464', time: '21:51'},
-          {emp_code: '81008', time: '21:51'},
-          {emp_code: '81520', time: '21:51'},
-          {emp_code: '50415', time: '21:51'},
-          {emp_code: '80949', time: '21:51'},
-          {emp_code: '81545', time: '21:51'},
-          {emp_code: '81532', time: '21:51'},
-          {emp_code: '80858', time: '21:51'},
-          {emp_code: '80755', time: '21:51'},
-          {emp_code: '80629', time: '21:51'},
-          {emp_code: '81345', time: '21:51'},
-          {emp_code: '80738', time: '21:51'},
-          {emp_code: '81197', time: '21:51'},
-          {emp_code: '81546', time: '21:51'},
-          {emp_code: '50659', time: '21:51'},
-          {emp_code: '81421', time: '21:52'},
-          {emp_code: '81489', time: '21:52'},
-          {emp_code: '81490', time: '21:52'},
-          {emp_code: '81217', time: '21:52'},
-          {emp_code: '80048', time: '21:52'},
-          {emp_code: '81473', time: '21:52'},
-          {emp_code: '81465', time: '21:53'},
-          {emp_code: '80837', time: '21:53'},
-          {emp_code: '80693', time: '21:53'},
-          {emp_code: '80692', time: '21:53'},
-          {emp_code: '13162', time: '21:53'},
-          {emp_code: '81237', time: '21:53'},
-          {emp_code: '80802', time: '21:53'},
-          {emp_code: '13171', time: '21:53'},
-          {emp_code: '81228', time: '21:53'},
-          {emp_code: '80727', time: '21:53'},
-          {emp_code: '80670', time: '21:53'},
-          {emp_code: '80832', time: '21:53'},
-          {emp_code: '13106', time: '21:53'},
-          {emp_code: '81504', time: '21:53'},
-          {emp_code: '80677', time: '21:53'},
-          {emp_code: '81250', time: '21:53'},
-          {emp_code: '81481', time: '21:53'},
-          {emp_code: '81264', time: '21:53'},
-          {emp_code: '13137', time: '21:54'},
-          {emp_code: '80835', time: '21:54'},
-          {emp_code: '81523', time: '21:54'},
-          {emp_code: '81287', time: '21:54'},
-          {emp_code: '81305', time: '21:54'},
-          {emp_code: '80869', time: '21:54'},
-          {emp_code: '81193', time: '21:54'},
-          {emp_code: '80866', time: '21:54'},
-          {emp_code: '80095', time: '21:54'},
-          {emp_code: '80874', time: '21:54'},
-          {emp_code: '80826', time: '21:54'},
-          {emp_code: '13124', time: '21:54'},
-          {emp_code: '81352', time: '21:54'},
-          {emp_code: '13098', time: '21:54'},
-          {emp_code: '13119', time: '21:54'},
-          {emp_code: '81266', time: '21:54'},
-          {emp_code: '13103', time: '21:54'},
-          {emp_code: '80868', time: '21:54'},
-          {emp_code: '81547', time: '21:54'},
-          {emp_code: '81265', time: '21:54'},
-          {emp_code: '12403', time: '21:54'},
-          {emp_code: '81367', time: '21:54'},
-          {emp_code: '50402', time: '21:54'},
-          {emp_code: '50754', time: '21:54'},
-          {emp_code: '13107', time: '21:54'},
-          {emp_code: '12570', time: '21:55'},
-          {emp_code: '81201', time: '21:55'},
-          {emp_code: '81466', time: '21:55'},
-          {emp_code: '81417', time: '21:55'},
-          {emp_code: '81207', time: '21:55'},
-          {emp_code: '80107', time: '21:55'},
-          {emp_code: '12726', time: '21:55'},
-          {emp_code: '13187', time: '21:55'},
-          {emp_code: '80090', time: '21:55'},
-          {emp_code: '81225', time: '21:55'},
-          {emp_code: '81548', time: '21:55'},
-          {emp_code: '81483', time: '21:55'},
-          {emp_code: '50631', time: '21:55'},
-          {emp_code: '81253', time: '21:55'},
-          {emp_code: '81416', time: '21:55'},
-          {emp_code: '81203', time: '21:55'},
-          {emp_code: '80798', time: '21:55'},
-          {emp_code: '81224', time: '21:55'},
-          {emp_code: '80796', time: '21:55'},
-          {emp_code: '81531', time: '21:55'},
-          {emp_code: '80985', time: '21:55'},
-          {emp_code: '81549', time: '21:55'},
-          {emp_code: '81014', time: '21:55'},
-          {emp_code: '80413', time: '21:56'},
-          {emp_code: '81539', time: '21:56'},
-          {emp_code: '81239', time: '21:56'},
-          {emp_code: '50661', time: '21:56'},
-          {emp_code: '81418', time: '21:56'},
-          {emp_code: '81437', time: '21:56'},
-          {emp_code: '11135', time: '21:56'},
-          {emp_code: '50769', time: '21:57'},
-          {emp_code: '13159', time: '21:57'},
-          {emp_code: '80421', time: '21:58'},
-          {emp_code: '50549', time: '21:58'},
-          {emp_code: '50626', time: '21:58'},
-          {emp_code: '50517', time: '21:59'},
-          {emp_code: '50546', time: '22:00'},
-          {emp_code: '80091', time: '22:00'},
-          {emp_code: '90074', time: '22:00'},
-          {emp_code: '80043', time: '22:00'},
-          {emp_code: '81010', time: '22:02'},
-          {emp_code: '12799', time: '22:05'},
-          {emp_code: '50443', time: '22:06'},
-          {emp_code: '81009', time: '22:06'},
-          {emp_code: '13149', time: '22:10'},
-          {emp_code: '12244', time: '22:10'},
-          {emp_code: '81259', time: '22:11'},
-          {emp_code: '81331', time: '22:12'},
-          {emp_code: '50800', time: '22:31'},
-          {emp_code: '50802', time: '22:32'},   
-          {emp_code: '80472', time: '18:16'},
-          {emp_code: '50526', time: '13:00'},
-          {emp_code: '80035', time: '18:01'},
-          {emp_code: '90039', time: '17:11'},
-          {emp_code: '12731', time: '18:10'},
-          {emp_code: '50510', time: '14:21'},
-          {emp_code: '50463', time: '17:15'},
-          {emp_code: '11489', time: '18:35'},
-          {emp_code: '50625', time: '18:22'},
-          {emp_code: '11312', time: '18:17'},
-          {emp_code: '90046', time: '16:00'},
-          {emp_code: '80976', time: '18:12'},
-          {emp_code: '80200', time: '14:11'},
-          {emp_code: '80975', time: '18:10'},
-          {emp_code: '80485', time: '16:10'},
-          {emp_code: '80059', time: '18:03'},
-          {emp_code: '80047', time: '18:10'},
-          {emp_code: '80218', time: '18:10'},
-          {emp_code: '50462', time: '14:22'},
-          {emp_code: '90069', time: '18:14'},
-          {emp_code: '81289', time: '14:22'},
-          {emp_code: '80711', time: '18:10'},
-          {emp_code: '80094', time: '17:13'},
-          {emp_code: '81290', time: '14:22'},
-          {emp_code: '80818', time: '18:12'},
-          {emp_code: '80477', time: '18:12'},
-          {emp_code: '81098', time: '18:12'},
-          {emp_code: '11449', time: '18:12'},
-          {emp_code: '81171', time: '18:12'},
-          {emp_code: '50654', time: '16:00'},
-          {emp_code: '12446', time: '18:14'},
-          {emp_code: '11043', time: '19:16'},
-          {emp_code: '81477', time: '14:11'},
-          {emp_code: '50753', time: '14:17'},
-          {emp_code: '13139', time: '18:10'},
-          {emp_code: '80675', time: '18:07'},
-          {emp_code: '80005', time: '17:13'},
-          {emp_code: '13160', time: '18:14'},
-          {emp_code: '80003', time: '17:11'},
-          {emp_code: '80046', time: '18:12'},
-          {emp_code: '80483', time: '18:06'},
-          {emp_code: '81125', time: '18:10'},
-          {emp_code: '12972', time: '18:16'},
-          {emp_code: '50650', time: '18:13'},
-          {emp_code: '80496', time: '14:09'},
-          {emp_code: '12817', time: '18:17'},
   
-          {emp_code: '80736', time: '18:11'},
-          {emp_code: '50798', time: '17:18'},
-          {emp_code: '50639', time: '16:00'},
-          {emp_code: '80817', time: '18:13'},
-          {emp_code: '50653', time: '14:12'},
-          {emp_code: '13152', time: '14:14'},
-          {emp_code: '11304', time: '19:29'},
-          {emp_code: '50627', time: '18:34'},
-          {emp_code: '11652', time: '18:16'},
-          {emp_code: '13110', time: '18:08'},
-          {emp_code: '12709', time: '19:20'},
-          {emp_code: '81218', time: '18:10'},
-          {emp_code: '12730', time: '17:14'},
-          {emp_code: '12974', time: '18:11'},
-          {emp_code: '13104', time: '18:12'},
-          {emp_code: '50484', time: '18:08'},
-          {emp_code: '80064', time: '18:14'},
-          {emp_code: '80357', time: '18:09'},
-          {emp_code: '11062', time: '18:13'},
-          {emp_code: '80929', time: '18:14'},
-          {emp_code: '13140', time: '18:12'},
-          {emp_code: '80995', time: '18:13'},
-          {emp_code: '81346', time: '14:16'},
-          {emp_code: '50767', time: '14:22'},
-          {emp_code: '80750', time: '18:10'},
-          {emp_code: '11345', time: '18:12'},
-          {emp_code: '81486', time: '18:13'},
-          {emp_code: '13158', time: '14:11'},
-          {emp_code: '50601', time: '14:05'},
-          {emp_code: '80977', time: '14:10'},
-          {emp_code: '13150', time: '14:10'},
-          {emp_code: '81041', time: '14:10'},
-          {emp_code: '11269', time: '18:15'},
-          {emp_code: '12715', time: '18:12'},
-          {emp_code: '80077', time: '14:31'},
-          {emp_code: '13133', time: '18:07'},
-          {emp_code: '12710', time: '18:11'},
-          {emp_code: '81482', time: '14:16'},
-          {emp_code: '81485', time: '14:16'},
-          {emp_code: '12851', time: '18:06'},
-          {emp_code: '81484', time: '14:16'},
-          {emp_code: '81526', time: '14:11'},
-          {emp_code: '80992', time: '14:16'},
-          {emp_code: '12846', time: '14:15'},
-          {emp_code: '13142', time: '17:24'},
-          {emp_code: '50649', time: '14:24'},
-          {emp_code: '81430', time: '18:12'},
-          {emp_code: '81058', time: '18:14'},
-          {emp_code: '80709', time: '18:11'},
-          {emp_code: '81262', time: '14:16'},
-          {emp_code: '81088', time: '18:11'},
-          {emp_code: '81256', time: '14:10'},
-          {emp_code: '81087', time: '14:12'},
-          {emp_code: '81261', time: '14:16'},
-          {emp_code: '81449', time: '18:12'},
-          {emp_code: '80712', time: '14:10'},
-          {emp_code: '80927', time: '14:17'},
-          {emp_code: '13135', time: '18:13'},
-          {emp_code: '81338', time: '18:00'},
-          {emp_code: '81131', time: '14:12'},
-          {emp_code: '81344', time: '18:00'},
-          {emp_code: '12852', time: '18:10'},
-          {emp_code: '80006', time: '17:10'},
-          {emp_code: '13108', time: '18:04'},
-          {emp_code: '81468', time: '18:06'},
-          {emp_code: '12720', time: '18:12'},
-          {emp_code: '80267', time: '18:17'},
-          {emp_code: '50410', time: '14:21'},
-          {emp_code: '81505', time: '14:10'},
-          {emp_code: '80052', time: '18:09'},
-          {emp_code: '81506', time: '14:10'},
-          {emp_code: '80821', time: '14:22'},
-          {emp_code: '12129', time: '18:11'},
-          {emp_code: '80133', time: '18:08'},
-          {emp_code: '81248', time: '18:11'},
-          {emp_code: '90026', time: '17:21'},
-          {emp_code: '81220', time: '18:00'},
-          {emp_code: '81507', time: '14:11'},
-          {emp_code: '81469', time: '14:12'},
-          {emp_code: '12387', time: '18:17'},
-          {emp_code: '81132', time: '18:11'},
-          {emp_code: '80788', time: '18:13'},
-          {emp_code: '81508', time: '14:12'},
-          {emp_code: '90045', time: '18:11'},
-          {emp_code: '13111', time: '18:09'},
-          {emp_code: '81294', time: '14:11'},
-          {emp_code: '80820', time: '14:22'},
-          {emp_code: '12949', time: '18:14'},
-          {emp_code: '13153', time: '18:11'},
-          {emp_code: '11342', time: '14:11'},
-          {emp_code: '80899', time: '18:10'},
-          {emp_code: '80773', time: '18:13'},
-          {emp_code: '90064', time: '14:10'},
-          {emp_code: '81359', time: '14:15'},
-          {emp_code: '81282', time: '18:10'},
-          {emp_code: '81159', time: '18:11'},
-          {emp_code: '80092', time: '18:13'},
-          {emp_code: '80900', time: '14:12'},
-          {emp_code: '81361', time: '14:12'},
-          {emp_code: '80854', time: '14:11'},
-          {emp_code: '12727', time: '14:28'},
-          {emp_code: '12923', time: '18:07'},
-          {emp_code: '81360', time: '14:12'},
-          {emp_code: '81235', time: '18:10'},
-          {emp_code: '12073', time: '18:17'},
-          {emp_code: '81130', time: '14:19'},
-          {emp_code: '50454', time: '14:11'},
-          {emp_code: '81528', time: '14:11'},
-          {emp_code: '80884', time: '14:16'},
-          {emp_code: '50548', time: '18:21'},
-          {emp_code: '13134', time: '19:10'},
-          {emp_code: '81353', time: '14:14'},
-          {emp_code: '80102', time: '18:14'},
-          {emp_code: '81511', time: '18:11'},
-          {emp_code: '80106', time: '17:21'},
-          {emp_code: '13116', time: '18:12'},
-          {emp_code: '80800', time: '18:11'},
-          {emp_code: '50755', time: '17:11'},
-          {emp_code: '80953', time: '14:17'},
-          {emp_code: '81310', time: '18:10'},
-          {emp_code: '50409', time: '14:11'},
-          {emp_code: '81311', time: '14:17'},
-          {emp_code: '50804', time: '14:10'},
-          {emp_code: '81527', time: '14:11'},
-          {emp_code: '50560', time: '14:17'},
-          {emp_code: '80732', time: '14:10'},
-          {emp_code: '80728', time: '14:10'},
-          {emp_code: '81133', time: '18:04'},
-          {emp_code: '11671', time: '18:13'},
-          {emp_code: '81542', time: '21:52'},
-          {emp_code: '13130', time: '17:17'},
-          {emp_code: '90059', time: '18:11'},
-          {emp_code: '50799', time: '14:22'},
-          {emp_code: '10955', time: '18:25'},
-          {emp_code: '11210', time: '18:14'},
-          {emp_code: '50512', time: '14:11'},
-          {emp_code: '90040', time: '18:10'},
-          {emp_code: '81322', time: '18:05'},
-          {emp_code: '81320', time: '14:19'},
-          {emp_code: '81457', time: '14:11'},
-          {emp_code: '81487', time: '18:14'},
-          {emp_code: '12719', time: '18:08'},
-          {emp_code: '81429', time: '18:12'},
-          {emp_code: '50404', time: '14:11'},
-          {emp_code: '81458', time: '18:14'},
-          {emp_code: '81456', time: '18:14'},
-          {emp_code: '81514', time: '18:12'},
-          {emp_code: '12729', time: '14:23'},
-          {emp_code: '81496', time: '14:11'},
-          {emp_code: '11887', time: '18:13'},
-          {emp_code: '50772', time: '17:22'},
-          {emp_code: '81026', time: '14:10'},
-          {emp_code: '12318', time: '14:14'},
-          {emp_code: '50166', time: '14:20'},
-          {emp_code: '12708', time: '18:18'},
-          {emp_code: '50768', time: '17:23'},
-          {emp_code: '81536', time: '18:07'},
-          {emp_code: '81535', time: '14:11'},
-          {emp_code: '12430', time: '18:12'},
-          {emp_code: '81321', time: '18:05'},
-          {emp_code: '81148', time: '18:13'},
-          {emp_code: '81035', time: '18:12'},
-          {emp_code: '81222', time: '18:13'},
-          {emp_code: '50663', time: '18:11'},
-          {emp_code: '81223', time: '18:13'},
-          {emp_code: '81158', time: '18:13'},
-          {emp_code: '80330', time: '18:10'},
-          {emp_code: '10833', time: '19:31'},
-          {emp_code: '80050', time: '18:02'},
-          {emp_code: '11418', time: '18:11'},
-          {emp_code: '50382', time: '14:35'},
-          {emp_code: '13154', time: '18:12'},
-          {emp_code: '50516', time: '18:13'},
-          {emp_code: '80939', time: '18:12'},
-          {emp_code: '81246', time: '18:11'},
-          {emp_code: '81543', time: '21:52'},
-          {emp_code: '81063', time: '18:11'},
-          {emp_code: '81541', time: '21:53'},
-          {emp_code: '81242', time: '18:11'},
-          {emp_code: '10947', time: '18:20'},
-          {emp_code: '81495', time: '14:11'},
-          {emp_code: '50660', time: '14:27'},
-          {emp_code: '12859', time: '18:13'},
-          {emp_code: '81544', time: '21:52'},
-          {emp_code: '80153', time: '18:16'},
-          {emp_code: '50133', time: '14:20'},
-          {emp_code: '80525', time: '19:16'},
-          {emp_code: '11048', time: '18:57'},
-          {emp_code: '50519', time: '16:30'},
-          {emp_code: '50658', time: '18:13'},
-          {emp_code: '80001', time: '14:12'},
-          {emp_code: '80093', time: '18:13'},
-          {emp_code: '13178', time: '21:54'},
-          {emp_code: '11447', time: '17:43'},
-          {emp_code: '80481', time: '14:21'},
-          {emp_code: '80488', time: '18:08'},
-          {emp_code: '81291', time: '14:23'},
-          {emp_code: '80082', time: '17:28'},
-          {emp_code: '50203', time: '14:01'},
-  
-          {emp_code: '80053', time: '17:18'},
-          {emp_code: '81210', time: '21:10'},
-          {emp_code: '12843', time: '17:17'},
-          {emp_code: '50603', time: '19:11'},
-          {emp_code: '81196', time: '21:09'},
-          {emp_code: '13045', time: '21:08'},
-          {emp_code: '50628', time: '18:11'},
-          {emp_code: '13113', time: '21:09'},
-          {emp_code: '81499', time: '21:11'},
-          {emp_code: '50633', time: '21:04'},
-          {emp_code: '81498', time: '21:06'},
-          {emp_code: '80743', time: '21:10'},
-          {emp_code: '80742', time: '21:10'},
-          {emp_code: '80741', time: '21:10'},
-          {emp_code: '13122', time: '17:18'},
-          {emp_code: '80097', time: '21:05'},
-          {emp_code: '81211', time: '17:30'},
-          {emp_code: '81234', time: '17:30'},
-          {emp_code: '80671', time: '21:11'},
-          {emp_code: '80931', time: '21:17'},
-          {emp_code: '81209', time: '17:30'},
-          {emp_code: '81212', time: '21:06'},
-          {emp_code: '81213', time: '21:05'},
-          {emp_code: '81464', time: '17:32'},
-          {emp_code: '81312', time: '19:08'},
-          {emp_code: '81478', time: '21:16'},
-          {emp_code: '80669', time: '19:18'},
-          {emp_code: '81350', time: '17:25'},
-          {emp_code: '50518', time: '17:39'},
-          {emp_code: '11453', time: '17:24'},
-          {emp_code: '81434', time: '21:10'},
-          {emp_code: '81347', time: '21:10'},
-          {emp_code: '81183', time: '19:15'},
-          {emp_code: '81236', time: '21:11'},
-          {emp_code: '81033', time: '21:06'},
-          {emp_code: '13123', time: '17:18'},
-          {emp_code: '81032', time: '21:06'},
-          {emp_code: '13121', time: '17:20'},
-          {emp_code: '13120', time: '17:20'},
-          {emp_code: '50099', time: '17:29'},
-          {emp_code: '81034', time: '21:06'},
-          {emp_code: '50515', time: '17:15'},
-          {emp_code: '81198', time: '21:08'},
-          {emp_code: '81195', time: '21:08'},
-          {emp_code: '12614', time: '19:11'},
-          {emp_code: '80484', time: '16:31'},
-          {emp_code: '50106', time: '17:16'},
-          {emp_code: '12575', time: '17:16'},
-          {emp_code: '50397', time: '19:57'},
-          {emp_code: '11987', time: '19:19'},
-          {emp_code: '80891', time: '21:06'},
-          {emp_code: '81204', time: '21:10'},
-          {emp_code: '80890', time: '21:06'},
-          {emp_code: '12443', time: '21:09'},
-          {emp_code: '12561', time: '21:18'},
-          {emp_code: '81231', time: '17:17'},
-          {emp_code: '81147', time: '19:15'},
-          {emp_code: '12920', time: '17:17'},
-          {emp_code: '81205', time: '17:25'},
-          {emp_code: '80672', time: '21:15'},
-          {emp_code: '81199', time: '17:25'},
-          {emp_code: '50482', time: '20:19'},
-          {emp_code: '80680', time: '21:14'},
-          {emp_code: '81252', time: '19:08'},
-          {emp_code: '13105', time: '17:34'},
-          {emp_code: '50109', time: '17:15'},
-          {emp_code: '12106', time: '17:19'},
-          {emp_code: '50304', time: '14:59'},
-          {emp_code: '50091', time: '17:15'},
-          {emp_code: '50111', time: '17:12'},
-          {emp_code: '11044', time: '19:15'},
-          {emp_code: '50147', time: '17:31'},
-          {emp_code: '80662', time: '21:08'},
-          {emp_code: '80819', time: '19:18'},
-          {emp_code: '12317', time: '21:05'},
-          {emp_code: '13118', time: '21:09'},
-          {emp_code: '80673', time: '21:05'},
-          {emp_code: '81175', time: '21:16'},
-          {emp_code: '50420', time: '17:24'},
-          {emp_code: '50352', time: '17:19'},
-          {emp_code: '50547', time: '21:02'},
-          {emp_code: '81480', time: '21:11'},
-          {emp_code: '50334', time: '13:59'},
-          {emp_code: '50118', time: '17:25'},
-          {emp_code: '11271', time: '17:23'},
-          {emp_code: '50453', time: '17:28'},
-          {emp_code: '11440', time: '17:31'},
-          {emp_code: '12995', time: '20:07'},
-          {emp_code: '50381', time: '17:15'},
-          {emp_code: '81343', time: '21:11'},
-          {emp_code: '81295', time: '21:11'},
-          {emp_code: '80190', time: '17:18'},
-          {emp_code: '80688', time: '21:08'},
-          {emp_code: '50456', time: '17:13'},
-          {emp_code: '50079', time: '17:46'},
-          {emp_code: '50113', time: '15:17'},
-          {emp_code: '50185', time: '17:44'},
-          {emp_code: '50763', time: '21:06'},
-          {emp_code: '50309', time: '17:40'},
-          {emp_code: '90060', time: '17:14'},
-          {emp_code: '50168', time: '17:16'},
-          {emp_code: '50092', time: '17:15'},
-          {emp_code: '50117', time: '17:15'},
-          {emp_code: '50805', time: '17:16'},
-          {emp_code: '50097', time: '17:14'},
-          {emp_code: '12305', time: '19:15'},
-          {emp_code: '12175', time: '19:15'},
-          {emp_code: '50167', time: '17:17'},
-          {emp_code: '12067', time: '17:20'},
-          {emp_code: '13145', time: '19:09'},
-          {emp_code: '50123', time: '17:13'},
-          {emp_code: '50100', time: '17:15'},
-          {emp_code: '50169', time: '17:17'},
-          {emp_code: '12903', time: '21:08'},
-          {emp_code: '12148', time: '21:09'},
-          {emp_code: '12429', time: '19:12'},
-          {emp_code: '12889', time: '19:10'},
-          {emp_code: '81111', time: '19:17'},
-          {emp_code: '13018', time: '19:10'},
-          {emp_code: '50554', time: '17:15'},
-          {emp_code: '12893', time: '19:11'},
-          {emp_code: '50582', time: '17:38'},
-          {emp_code: '13132', time: '17:21'},
-          {emp_code: '50640', time: '17:18'},
-          {emp_code: '80770', time: '21:11'},
-          {emp_code: '12723', time: '17:13'},
-          {emp_code: '12155', time: '19:13'},
-          {emp_code: '81334', time: '17:25'},
-          {emp_code: '12234', time: '17:31'},
-                    {emp_code: '12158', time: '19:10'},
-          {emp_code: '50689', time: '17:20'},
-          {emp_code: '12351', time: '22:15'},
-          {emp_code: '13117', time: '17:21'},
-          {emp_code: '50412', time: '20:10'},
-          {emp_code: '12996', time: '17:20'},
-          {emp_code: '50771', time: '17:20'},
-          {emp_code: '50433', time: '17:22'},
-          {emp_code: '50114', time: '17:16'},
-          {emp_code: '80661', time: '21:08'},
-          {emp_code: '80747', time: '21:14'},
-          {emp_code: '12358', time: '17:19'},
-          {emp_code: '50829', time: '17:19'},
-          {emp_code: '13141', time: '19:20'},
-          {emp_code: '12546', time: '19:20'},
-          {emp_code: '50101', time: '17:13'},
-          {emp_code: '80768', time: '21:07'},
-          {emp_code: '50765', time: '19:13'},
-          {emp_code: '12037', time: '21:08'},
-          {emp_code: '12431', time: '19:13'},
-          {emp_code: '12006', time: '17:25'},
-          {emp_code: '12183', time: '18:14'},
-          {emp_code: '80765', time: '21:15'},
-          {emp_code: '50550', time: '17:13'},
-          {emp_code: '12948', time: '17:17'},
-          {emp_code: '81432', time: '19:17'},
-          {emp_code: '50059', time: '17:44'},
-          {emp_code: '81431', time: '21:06'},
-          {emp_code: '80797', time: '17:15'},
-          {emp_code: '50673', time: '17:26'},
-          {emp_code: '50553', time: '17:17'},
-          {emp_code: '50470', time: '20:09'},
-          {emp_code: '50440', time: '17:24'},
-          
-          {emp_code: '50483', time: '17:26'},
-          {emp_code: '13094', time: '17:10'},
-          {emp_code: '50354', time: '17:14'},
-          {emp_code: '50815', time: '20:07'},
-          {emp_code: '50538', time: '17:31'},
-          {emp_code: '50335', time: '17:20'},
-          {emp_code: '80885', time: '17:32'},
-          {emp_code: '50108', time: '17:16'},
-          {emp_code: '50437', time: '17:17'},
-          {emp_code: '13127', time: '17:16'},
-          {emp_code: '90034', time: '22:20'},
-          {emp_code: '11072', time: '21:22'},
-          {emp_code: '13151', time: '17:16'},
-          {emp_code: '81433', time: '19:18'},
-          {emp_code: '50641', time: '17:18'},
-          {emp_code: '50620', time: '20:06'},
-          {emp_code: '50383', time: '17:17'},
-          {emp_code: '50183', time: '17:11'},
-          {emp_code: '50379', time: '17:16'},
-          {emp_code: '50622', time: '22:16'},
-          {emp_code: '50395', time: '17:16'},
-          {emp_code: '50896', time: '17:17'},
-          {emp_code: '50527', time: '12:37'},
-          {emp_code: '11618', time: '17:30'},
-          {emp_code: '81206', time: '17:29'},
-          {emp_code: '81200', time: '17:29'},
-          {emp_code: '50347', time: '17:12'},
-          {emp_code: '50093', time: '17:12'},
-          {emp_code: '50384', time: '18:40'},
-          {emp_code: '50623', time: '17:16'},
-          {emp_code: '50605', time: '17:14'},
-          {emp_code: '80009', time: '17:15'},
-          {emp_code: '80074', time: '17:19'},
-          {emp_code: '50451', time: '17:13'},
-          {emp_code: '50485', time: '18:20'},
-          {emp_code: '50468', time: '17:14'},
-          {emp_code: '50486', time: '17:16'},
-          {emp_code: '50429', time: '17:15'},
-          {emp_code: '12026', time: '17:45'},
-          {emp_code: '50327', time: '17:39'},
-          {emp_code: '11014', time: '17:25'},
-          {emp_code: '50513', time: '21:05'},
-          {emp_code: '50795', time: '18:23'},
-          {emp_code: '50469', time: '17:15'},
-          {emp_code: '12728', time: '19:06'},
-          {emp_code: '90032', time: '17:16'},
-          {emp_code: '90020', time: '21:04'},
-          {emp_code: '50493', time: '18:15'},
-          {emp_code: '50071', time: '17:16'},
-          {emp_code: '50666', time: '18:15'},
-          {emp_code: '50036', time: '17:11'},
-          {emp_code: '50077', time: '18:11'},
-          {emp_code: '50320', time: '19:44'},
-          {emp_code: '50170', time: '17:15'},
-          {emp_code: '12010', time: '19:13'},
-          {emp_code: '11889', time: '20:07'},
-          {emp_code: '50648', time: '17:15'},
-          {emp_code: '50130', time: '17:16'},
-          {emp_code: '80041', time: '17:19'},
-          {emp_code: '50094', time: '17:19'},
-          {emp_code: '11334', time: '21:36'},
-          {emp_code: '50632', time: '18:36'},
-          {emp_code: '50121', time: '17:16'},
-          {emp_code: '50180', time: '18:10'},
-          {emp_code: '50323', time: '17:15'},
-          {emp_code: '50501', time: '18:19'},
-          {emp_code: '50350', time: '17:15'},
-          {emp_code: '50686', time: '19:02'},
-          {emp_code: '50083', time: '17:31'},
-          {emp_code: '50348', time: '17:15'},
-          {emp_code: '11518', time: '21:24'},
-          {emp_code: '50444', time: '17:29'},
-          {emp_code: '50110', time: '17:18'},
-          {emp_code: '50128', time: '17:12'},
-          {emp_code: '50610', time: '18:10'},
-          {emp_code: '12825', time: '17:51'},
-          {emp_code: '11157', time: '22:14'},
-          {emp_code: '12579', time: '20:09'},
-          {emp_code: '50182', time: '17:19'},
-          {emp_code: '50333', time: '17:14'},
-          {emp_code: '50041', time: '20:06'},
-          {emp_code: '50368', time: '17:31'},
-          {emp_code: '50500', time: '19:52'},
-          {emp_code: '80921', time: '17:10'},
-          {emp_code: '50536', time: '17:54'},
-          {emp_code: '80476', time: '18:16'},
-          {emp_code: '50475', time: '17:18'},
-          {emp_code: '50662', time: '17:11'},
-          {emp_code: '50086', time: '17:31'},
-          {emp_code: '50049', time: '17:29'},
-          {emp_code: '50390', time: '18:08'},
-          {emp_code: '50186', time: '17:19'},
-          {emp_code: '50385', time: '17:16'},
-          {emp_code: '50126', time: '17:11'},
-          {emp_code: '50058', time: '17:23'},
-          {emp_code: '50602', time: '18:10'},
-          {emp_code: '50436', time: '17:15'},
-          {emp_code: '50430', time: '18:08'},
-          {emp_code: '50421', time: '18:14'},
-          {emp_code: '50597', time: '17:19'},
-          {emp_code: '80108', time: '17:18'},
-          {emp_code: '11452', time: '21:03'},
-          {emp_code: '50629', time: '17:36'},
-          {emp_code: '50405', time: '18:33'},
-          {emp_code: '50401', time: '20:48'},
-          {emp_code: '50634', time: '17:54'},
-          {emp_code: '50599', time: '21:04'},
-          {emp_code: '81007', time: '17:17'},
-          {emp_code: '50595', time: '22:16'},
-          {emp_code: '50391', time: '20:11'},
-          {emp_code: '50089', time: '17:14'},
-          {emp_code: '50137', time: '19:49'},
-          {emp_code: '50671', time: '17:10'},
-          {emp_code: '50362', time: '15:07'},
-          {emp_code: '00016', time: '17:00'},
-          {emp_code: '50047', time: '17:00'},
-          {emp_code: '50129', time: '17:00'},
-          {emp_code: '50139', time: '17:00'},
-          {emp_code: '50201', time: '17:00'},
-          {emp_code: '50300', time: '17:00'},
-          {emp_code: '50331', time: '17:00'},
-          {emp_code: '50539', time: '17:00'},
-          {emp_code: '50757', time: '17:00'},
-          {emp_code: '50756', time: '19:26'},
-          {emp_code: '50386', time: '17:55'},
-          {emp_code: '50672', time: '20:32'},
-          {emp_code: '50318', time: '18:08'},
-          
-          {emp_code: '50400', time: '22:09'},
-          {emp_code: '11198', time: '2:10'},
-          {emp_code: '11377', time: '22:15'},
-          {emp_code: '81013', time: '22:17'},
-          {emp_code: '11595', time: '2:10'},
-          {emp_code: '80191', time: '22:10'},
-          {emp_code: '50656', time: '22:15'},
-          {emp_code: '81005', time: '22:17'},
-          {emp_code: '50657', time: '22:10'},
-          {emp_code: '80051', time: '22:13'},
-          {emp_code: '50766', time: '22:15'},
-          {emp_code: '81038', time: '22:11'},
-          {emp_code: '50751', time: '22:20'},
-          {emp_code: '50455', time: '22:22'},
-          {emp_code: '80045', time: '22:05'},
-          {emp_code: '80816', time: '22:15'},
-          {emp_code: '50682', time: '22:08'},
-          {emp_code: '81413', time: '22:12'},
-          {emp_code: '12712', time: '2:07'},
-          {emp_code: '50596', time: '22:11'},
-          {emp_code: '11551', time: '22:29'},
-          {emp_code: '11118', time: '6:39'},
-          {emp_code: '80930', time: '2:10'},
-          {emp_code: '12722', time: '22:06'},
-          {emp_code: '81020', time: '2:15'},
-          {emp_code: '11054', time: '22:14'},
-          {emp_code: '81078', time: '22:04'},
-          {emp_code: '81022', time: '22:17'},
-          {emp_code: '81285', time: '22:14'},
-          {emp_code: '80667', time: '22:16'},
-          {emp_code: '80007', time: '22:10'},
-          {emp_code: '81036', time: '22:17'},
-          {emp_code: '50652', time: '22:13'},
-          {emp_code: '81376', time: '22:15'},
-          {emp_code: '50466', time: '22:29'},
-          {emp_code: '81375', time: '22:15'},
-          {emp_code: '81374', time: '22:14'},
-          {emp_code: '13099', time: '22:10'},
-          {emp_code: '80704', time: '22:19'},
-          {emp_code: '13097', time: '22:12'},
-          {emp_code: '80845', time: '22:11'},
-          {emp_code: '80841', time: '22:11'},
-          {emp_code: '13102', time: '22:15'},
-          {emp_code: '80842', time: '22:12'},
-          {emp_code: '13041', time: '22:14'},
-          {emp_code: '80067', time: '22:04'},
-          {emp_code: '50669', time: '23:14'},
-          {emp_code: '80686', time: '22:08'},
-          {emp_code: '81268', time: '22:13'},
-          {emp_code: '81517', time: '22:09'},
-          {emp_code: '13146', time: '22:15'},
-          {emp_code: '80668', time: '22:13'},
-          {emp_code: '80875', time: '22:13'},
-          {emp_code: '90077', time: '22:13'},
-          {emp_code: '81308', time: '22:13'},
-          {emp_code: '12587', time: '22:10'},
-          {emp_code: '80004', time: '22:10'},
-          {emp_code: '13164', time: '22:12'},
-          {emp_code: '80008', time: '22:10'},
-          {emp_code: '13115', time: '22:20'},
-          {emp_code: '80733', time: '22:08'},
-          {emp_code: '90071', time: '22:11'},
-          {emp_code: '81298', time: '22:11'},
-          {emp_code: '81286', time: '22:11'},
-          {emp_code: '81530', time: '22:08'},
-          {emp_code: '50509', time: '2:06'},
-          {emp_code: '80076', time: '22:11'},
-          {emp_code: '50471', time: '22:15'},
-          {emp_code: '13096', time: '22:17'},
-          {emp_code: '81339', time: '22:12'},
-          {emp_code: '13081', time: '22:21'},
-          {emp_code: '81251', time: '22:14'},
-          {emp_code: '81103', time: '2:08'},
-          {emp_code: '80684', time: '22:15'},
-          {emp_code: '81221', time: '22:10'},
-          {emp_code: '80612', time: '22:15'},
-          {emp_code: '81233', time: '22:16'},
-          {emp_code: '81497', time: '22:11'},
-          {emp_code: '50502', time: '22:08'},
-          {emp_code: '81500', time: '22:11'},
-          {emp_code: '50399', time: '22:11'},
-          {emp_code: '50803', time: '2:15'},
-          {emp_code: '81501', time: '22:16'},
-          {emp_code: '80705', time: '22:18'},
-          {emp_code: '80703', time: '22:18'},
-          {emp_code: '81328', time: '5:55'},
-          {emp_code: '81512', time: '22:09'},
-          {emp_code: '81327', time: '5:56'},
-          {emp_code: '50608', time: '0:03'},
-          {emp_code: '81335', time: '22:10'},
-          {emp_code: '81513', time: '22:08'},
-          {emp_code: '81502', time: '22:11'},
-          {emp_code: '81479', time: '22:11'},
-          {emp_code: '81503', time: '22:11'},
-          {emp_code: '80049', time: '22:10'},
-          {emp_code: '13131', time: '22:10'},
-          {emp_code: '81515', time: '22:09'},
-          {emp_code: '80065', time: '22:12'},
-          {emp_code: '90047', time: '22:15'},
-          {emp_code: '80101', time: '21:05'},
-          {emp_code: '81518', time: '22:13'},
-          {emp_code: '50801', time: '23:15'},
-          {emp_code: '12585', time: '22:10'},
-          {emp_code: '50127', time: '22:12'},
-          {emp_code: '50131', time: '22:11'},
-          {emp_code: '80729', time: '22:11'},
-          {emp_code: '80889', time: '22:11'},
-          {emp_code: '50413', time: '22:09'},
-          {emp_code: '50667', time: '22:41'},
-          {emp_code: '50403', time: '22:11'},
-          {emp_code: '81303', time: '22:11'},
-          {emp_code: '81126', time: '22:20'},
-          {emp_code: '12963', time: '22:09'},
-          {emp_code: '13157', time: '22:11'},
-          {emp_code: '90029', time: '2:13'},
-          {emp_code: '11165', time: '22:31'},
-          {emp_code: '80075', time: '22:08'},
-          {emp_code: '12108', time: '22:16'},
-          {emp_code: '81155', time: '22:15'},
-          {emp_code: '13136', time: '22:00'},
-          {emp_code: '81160', time: '22:14'},
-          {emp_code: '50668', time: '22:13'},
-          {emp_code: '11172', time: '22:19'},
-          {emp_code: '81156', time: '22:10'},        
-          {emp_code: '50406', time: '18:30'},
-          {emp_code: '11485', time: '22:12'},
-          {emp_code: '13029', time: '22:10'},
-          {emp_code: '50655', time: '22:13'},
-          {emp_code: '80489', time: '22:20'},
-          {emp_code: '50559', time: '23:32'},
-          {emp_code: '81146', time: '22:16'},
-          {emp_code: '13180', time: '22:14'},
-          {emp_code: '81002', time: '22:14'},
-          {emp_code: '13100', time: '22:13'},
-          {emp_code: '81363', time: '22:12'},
-          {emp_code: '13148', time: '22:11'},
-          {emp_code: '13155', time: '22:12'},
-          {emp_code: '81364', time: '22:08'},
-          {emp_code: '11661', time: '22:13'},
-          {emp_code: '50134', time: '22:05'},
-          {emp_code: '50600', time: '2:06'},
-          {emp_code: '81304', time: '22:10'},
-          {emp_code: '81309', time: '22:08'},
-          {emp_code: '80793', time: '22:14'},
-          {emp_code: '50514', time: '22:20'},
-          {emp_code: '12211', time: '22:12'},
-          {emp_code: '81534', time: '6:00'},
-          {emp_code: '81538', time: '6:01'},
-          {emp_code: '81537', time: '6:02'},
-          {emp_code: '13183', time: '5:57'},
-          {emp_code: '50809', time: '5:57'},
-          {emp_code: '11311', time: '5:59'},
-          {emp_code: '11576', time: '7:55'},
-          {emp_code: '80974', time: '6:16'},
-          {emp_code: '80060', time: '6:11'},
-          {emp_code: '11361', time: '6:07'},
-          {emp_code: '90009', time: '6:24'},
-          {emp_code: '90068', time: '6:11'},
-          {emp_code: '13073', time: '6:14'},
-          {emp_code: '80313', time: '6:13'},
-          {emp_code: '11717', time: '6:15'},
-          {emp_code: '11983', time: '6:17'},
-          {emp_code: '11438', time: '6:16'},
-          {emp_code: '80756', time: '6:11'},
-          {emp_code: '11332', time: '6:17'},
-          {emp_code: '80192', time: '6:07'},
-          {emp_code: '81075', time: '6:10'},
-          {emp_code: '12786', time: '6:15'},
-          {emp_code: '11753', time: '6:15'},
-          {emp_code: '80042', time: '6:10'},
-          {emp_code: '81060', time: '2:13'},
-          {emp_code: '81050', time: '2:13'},
-          {emp_code: '11645', time: '7:29'},
-          {emp_code: '11716', time: '6:10'},
-          {emp_code: '12711', time: '2:15'},
-          {emp_code: '80027', time: '6:08'},
-          {emp_code: '11747', time: '6:10'},
-          {emp_code: '81090', time: '6:11'},
-          {emp_code: '80012', time: '2:15'},
-          {emp_code: '81243', time: '6:10'},
-          {emp_code: '81446', time: '2:17'},
-          {emp_code: '81453', time: '6:11'},
-          {emp_code: '80753', time: '6:12'},
-          {emp_code: '90079', time: '2:17'},
-          {emp_code: '11649', time: '7:02'},
-          {emp_code: '90062', time: '6:13'},
-          {emp_code: '80098', time: '6:12'},
-          {emp_code: '50398', time: '2:12'},
-          {emp_code: '80838', time: '6:16'},
-          {emp_code: '81082', time: '6:12'},
-          {emp_code: '81072', time: '6:12'},
-          {emp_code: '80999', time: '6:11'},
-          {emp_code: '81024', time: '6:09'},
-          {emp_code: '81190', time: '2:09'},
-          {emp_code: '81463', time: '2:16'},
-          {emp_code: '81462', time: '2:15'},
-          {emp_code: '81170', time: '6:09'},
-          {emp_code: '00013', time: '2:00'},
-          {emp_code: '80181', time: '6:15'},
-          {emp_code: '11443', time: '6:22'},
-          {emp_code: '12714', time: '6:00'},
-          {emp_code: '12224', time: '5:56'},
-          {emp_code: '13114', time: '5:55'},
-          {emp_code: '81027', time: '6:01'},
-          {emp_code: '12716', time: '8:00'},
-          {emp_code: '50561', time: '6:24'},
-          {emp_code: '50506', time: '6:38'},
-          {emp_code: '81012', time: '6:10'},
-          {emp_code: '81037', time: '6:09'},
-          {emp_code: '80479', time: '6:34'},
-          {emp_code: '12717', time: '6:32'},
-          {emp_code: '12725', time: '6:33'},
-          {emp_code: '50647', time: '6:18'},
-          {emp_code: '80683', time: '6:08'},
-          {emp_code: '81293', time: '6:11'},
-          {emp_code: '81300', time: '6:10'},
-          {emp_code: '80882', time: '6:14'},
-          {emp_code: '80883', time: '6:14'},
-          {emp_code: '80881', time: '6:12'},
-          {emp_code: '80852', time: '6:11'},
-          {emp_code: '13109', time: '6:10'},
-          {emp_code: '80702', time: '6:16'},
-          {emp_code: '81186', time: '6:14'},
-          {emp_code: '13144', time: '6:17'},
-          {emp_code: '11333', time: '6:20'},
-          {emp_code: '81411', time: '6:12'},
-          {emp_code: '80096', time: '6:14'},
-          {emp_code: '90035', time: '6:12'},
-          {emp_code: '13173', time: '6:12'},
-          {emp_code: '81337', time: '6:12'},
-          {emp_code: '11255', time: '6:24'},
-          {emp_code: '80961', time: '6:11'},
-          {emp_code: '81522', time: '6:10'},
-          {emp_code: '81519', time: '6:10'},
-          {emp_code: '81149', time: '6:13'},
-          {emp_code: '81144', time: '6:14'},
-          {emp_code: '81154', time: '6:11'},
-          {emp_code: '12021', time: '6:15'},
-          {emp_code: '80061', time: '6:10'},
-          {emp_code: '50465', time: '7:11'},
-          {emp_code: '11648', time: '7:09'},
-          {emp_code: '81521', time: '6:10'},
-          {emp_code: '11215', time: '7:29'},
-          {emp_code: '50624', time: '6:09'},
-          {emp_code: '80988', time: '6:11'},
-          {emp_code: '12386', time: '6:10'},
-          {emp_code: '12718', time: '6:11'},
-          {emp_code: '81141', time: '6:12'},
-          {emp_code: '81077', time: '6:11'},
-          {emp_code: '50464', time: '7:08'},
-          {emp_code: '81008', time: '6:11'},
-          {emp_code: '81520', time: '6:10'},
-          {emp_code: '50415', time: '6:17'},
-          {emp_code: '80949', time: '6:14'},
-          {emp_code: '81545', time: '6:03'},
-          {emp_code: '81532', time: '6:06'},
-          {emp_code: '80858', time: '6:12'},
-          {emp_code: '80755', time: '6:11'},
-          {emp_code: '80629', time: '6:12'},
-          {emp_code: '81345', time: '6:12'},
-          {emp_code: '80738', time: '6:11'},
-          {emp_code: '81197', time: '6:06'},
-          {emp_code: '81546', time: '6:10'},
-          {emp_code: '50659', time: '6:09'},
-          {emp_code: '81421', time: '6:13'},
-          {emp_code: '81489', time: '6:12'},
-          {emp_code: '81490', time: '6:12'},
-          {emp_code: '81217', time: '6:12'},
-          {emp_code: '80048', time: '6:11'},
-          {emp_code: '81473', time: '6:14'},
-          {emp_code: '81465', time: '6:14'},
-          {emp_code: '80837', time: '6:16'},
-          {emp_code: '80693', time: '6:16'},
-          {emp_code: '80692', time: '6:17'},
-          {emp_code: '13162', time: '6:12'},
-          {emp_code: '81237', time: '6:11'},
-          {emp_code: '80802', time: '6:14'},
-          {emp_code: '13171', time: '6:11'},
-          {emp_code: '81228', time: '6:09'},
-          {emp_code: '80727', time: '6:12'},
-          {emp_code: '80670', time: '6:16'},
-          {emp_code: '80832', time: '6:16'},
-          {emp_code: '13106', time: '6:14'},
-          {emp_code: '81504', time: '6:15'},
-          {emp_code: '80677', time: '6:10'},
-          {emp_code: '81250', time: '6:11'},
-          {emp_code: '81481', time: '6:10'},
-          {emp_code: '81264', time: '6:16'},
-          {emp_code: '13137', time: '6:09'},
-          {emp_code: '80835', time: '6:16'},
-          {emp_code: '81523', time: '6:10'},
-          {emp_code: '81287', time: '6:12'},
-          {emp_code: '81305', time: '6:06'},
-          {emp_code: '80869', time: '6:10'},
-          {emp_code: '81193', time: '6:11'},
-          {emp_code: '80866', time: '6:10'},
-          {emp_code: '80095', time: '6:18'},
-          {emp_code: '80874', time: '6:10'},
-          {emp_code: '80826', time: '6:14'},
-          {emp_code: '13124', time: '6:15'},
-          {emp_code: '81352', time: '6:11'},
-          {emp_code: '13098', time: '6:12'},
-          {emp_code: '13119', time: '6:11'},
-          {emp_code: '81266', time: '6:16'},
-          {emp_code: '13103', time: '6:18'},
-          {emp_code: '80868', time: '6:10'},
-          {emp_code: '81547', time: '6:09'},
-          {emp_code: '81265', time: '6:16'},
-          {emp_code: '12403', time: '6:18'},
-          {emp_code: '81367', time: '6:15'},
-          {emp_code: '50402', time: '6:12'},
-          {emp_code: '50754', time: '7:08'},
-          {emp_code: '13107', time: '6:10'},
-          {emp_code: '12570', time: '6:10'},
-          {emp_code: '81201', time: '6:12'},
-          {emp_code: '81466', time: '6:12'},
-          {emp_code: '81417', time: '6:11'},
-          {emp_code: '81207', time: '6:11'},
-          {emp_code: '80107', time: '6:05'},
-          {emp_code: '12726', time: '6:12'},
-          {emp_code: '13187', time: '6:08'},
-          {emp_code: '80090', time: '6:13'},
-          {emp_code: '81225', time: '6:10'},
-          {emp_code: '81548', time: '6:10'},
-          {emp_code: '81483', time: '6:14'},
-          {emp_code: '50631', time: '6:26'},
-          {emp_code: '81253', time: '6:13'},
-          {emp_code: '81416', time: '6:11'},
-          {emp_code: '81203', time: '6:12'},
-          {emp_code: '80798', time: '6:12'},
-          {emp_code: '81224', time: '6:11'},
-          {emp_code: '80796', time: '6:12'},
-          {emp_code: '81531', time: '6:10'},
-          {emp_code: '80985', time: '6:11'},
-          {emp_code: '81549', time: '6:10'},
-          {emp_code: '81014', time: '6:11'},
-          {emp_code: '80413', time: '6:09'},
-          {emp_code: '81539', time: '6:10'},
-          {emp_code: '81239', time: '6:12'},
-          {emp_code: '50661', time: '6:12'},
-          {emp_code: '81418', time: '6:15'},
-          {emp_code: '81437', time: '6:12'},
-          {emp_code: '11135', time: '6:21'},
-          {emp_code: '50769', time: '6:20'},
-          {emp_code: '13159', time: '6:12'},
-          {emp_code: '80421', time: '6:10'},
-          {emp_code: '50549', time: '6:39'},
-          {emp_code: '50626', time: '6:37'},
-          {emp_code: '50517', time: '6:10'},
-          {emp_code: '50546', time: '7:09'},
-          {emp_code: '80091', time: '6:36'},
-          {emp_code: '90074', time: '6:15'},
-          {emp_code: '80043', time: '6:15'},
-          {emp_code: '81010', time: '6:10'},
-          {emp_code: '12799', time: '6:14'},
-          {emp_code: '50443', time: '6:09'},
-          {emp_code: '81259', time: '6:00'},
-          {emp_code: '81331', time: '6:11'},
-          {emp_code: '50800', time: '6:55'},
-          {emp_code: '50802', time: '6:55'},
-          {emp_code: '81529', time: '6:07'},
-          {emp_code: '81533', time: '6:07'},
-          {emp_code: '12707', time: '6:16'},
-          {emp_code: '12794', time: '20:37'},
-          {emp_code: '13177', time: '19:17'},
-          {emp_code: '50069', time: '8:04'},
-          {emp_code: '50366', time: '22:07'},
-          {emp_code: '50508', time: '2:02'},
-          {emp_code: '11434', time: '22:03'},
-          {emp_code: '11450', time: '19:21'},
-          {emp_code: '80063', time: '6:07'},
-          {emp_code: '80473', time: '7:16'},
-          {emp_code: '80934', time: '6:13'},
-          {emp_code: '80973', time: '22:14'},
-          {emp_code: '10930', time: '6:12'},
-          {emp_code: '81340', time: '5:59'}            
-        ]
-
+        var today = moment(new Date()).format('YYYY-MM-DD') + ' '
+        var yesterday = moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' '
 
         var arr = [
-          {emp_code: '80472', time: '5:40'},
-          {emp_code: '50526', time: '5:42'},
-          {emp_code: '80035', time: '5:43'},
-          {emp_code: '90039', time: '5:45'},
-          {emp_code: '12731', time: '5:46'},
-          {emp_code: '50510', time: '5:48'},
-          {emp_code: '50463', time: '5:48'},
-          {emp_code: '11489', time: '5:48'},
-          {emp_code: '50625', time: '5:48'},
-          {emp_code: '11312', time: '5:49'},
-          {emp_code: '90046', time: '5:49'},
-          {emp_code: '80976', time: '5:49'},
-          {emp_code: '80200', time: '5:49'},
-          {emp_code: '80975', time: '5:49'},
-          {emp_code: '80485', time: '5:49'},
-          {emp_code: '80059', time: '5:50'},
-          {emp_code: '80047', time: '5:50'},
-          {emp_code: '80218', time: '5:50'},
-          {emp_code: '50462', time: '5:50'},
-          {emp_code: '90069', time: '5:50'},
-          {emp_code: '81289', time: '5:50'},
-          {emp_code: '80711', time: '5:50'},
-          {emp_code: '80094', time: '5:50'},
-          {emp_code: '81290', time: '5:50'},
-          {emp_code: '80818', time: '5:50'},
-          {emp_code: '80477', time: '5:50'},
-          {emp_code: '81098', time: '5:50'},
-          {emp_code: '11449', time: '5:50'},
-          {emp_code: '81171', time: '5:51'},
-          {emp_code: '50654', time: '5:51'},
-          {emp_code: '12446', time: '5:51'},
-          {emp_code: '11043', time: '5:51'},
-          {emp_code: '81477', time: '5:51'},
-          {emp_code: '50753', time: '5:51'},
-          {emp_code: '13139', time: '5:51'},
-          {emp_code: '80675', time: '5:51'},
-          {emp_code: '80005', time: '5:51'},
-          {emp_code: '13160', time: '5:51'},
-          {emp_code: '80003', time: '5:51'},
-          {emp_code: '80046', time: '5:51'},
-          {emp_code: '80483', time: '5:52'},
-          {emp_code: '81125', time: '5:52'},
-          {emp_code: '12972', time: '5:52'},
-          {emp_code: '50650', time: '5:52'},
-          {emp_code: '80496', time: '5:52'},
-          {emp_code: '12817', time: '5:52'},
-          {emp_code: '81227', time: '5:52'},
-          {emp_code: '80736', time: '5:52'},
-          {emp_code: '50798', time: '5:52'},
-          {emp_code: '50639', time: '5:52'},
-          {emp_code: '80817', time: '5:52'},
-          {emp_code: '50653', time: '5:52'},
-          {emp_code: '13152', time: '5:52'},
-          {emp_code: '11304', time: '5:52'},
-          {emp_code: '50627', time: '5:52'},
-          {emp_code: '11652', time: '5:52'},
-          {emp_code: '13110', time: '5:52'},
-          {emp_code: '12709', time: '5:53'},
-          {emp_code: '81218', time: '5:53'},
-          {emp_code: '12730', time: '5:53'},
-          {emp_code: '12974', time: '5:53'},
-          {emp_code: '13104', time: '5:53'},
-          {emp_code: '50484', time: '5:53'},
-          {emp_code: '80064', time: '5:53'},
-          {emp_code: '80357', time: '5:53'},
-          {emp_code: '11062', time: '5:53'},
-          {emp_code: '80929', time: '5:53'},
-          {emp_code: '13140', time: '5:53'},
-          {emp_code: '80995', time: '5:53'},
-          {emp_code: '81346', time: '5:53'},
-          {emp_code: '50767', time: '5:53'},
-          {emp_code: '80750', time: '5:53'},
-          {emp_code: '11345', time: '5:53'},
-          {emp_code: '81486', time: '5:53'},
-          {emp_code: '13158', time: '5:53'},
-          {emp_code: '50601', time: '5:53'},
-          {emp_code: '80977', time: '5:53'},
-          {emp_code: '13150', time: '5:53'},
-          {emp_code: '81041', time: '5:53'},
-          {emp_code: '11269', time: '5:54'},
-          {emp_code: '12715', time: '5:54'},
-          {emp_code: '80077', time: '5:54'},
-          {emp_code: '13133', time: '5:54'},
-          {emp_code: '12710', time: '5:54'},
-          {emp_code: '81482', time: '5:54'},
-          {emp_code: '81485', time: '5:54'},
-          {emp_code: '12851', time: '5:54'},
-          {emp_code: '81484', time: '5:54'},
-          {emp_code: '81526', time: '5:54'},
-          {emp_code: '80992', time: '5:54'},
-          {emp_code: '12846', time: '5:54'},
-          {emp_code: '13142', time: '5:54'},
-          {emp_code: '50649', time: '5:54'},
-          {emp_code: '81430', time: '5:54'},
-          {emp_code: '81058', time: '5:54'},
-          {emp_code: '80709', time: '5:54'},
-          {emp_code: '81262', time: '5:55'},
-          {emp_code: '81088', time: '5:55'},
-          {emp_code: '81256', time: '5:55'},
-          {emp_code: '81087', time: '5:55'},
-          {emp_code: '81261', time: '5:55'},
-          {emp_code: '81449', time: '5:55'},
-          {emp_code: '80712', time: '5:55'},
-          {emp_code: '80927', time: '5:55'},
-          {emp_code: '13135', time: '5:55'},
-          {emp_code: '81338', time: '5:55'},
-          {emp_code: '81131', time: '5:55'},
-          {emp_code: '81344', time: '5:55'},
-          {emp_code: '12852', time: '5:55'},
-          {emp_code: '80006', time: '5:55'},
-          {emp_code: '13108', time: '5:55'},
-          {emp_code: '81468', time: '5:55'},
-          {emp_code: '12720', time: '5:55'},
-          {emp_code: '80267', time: '5:55'},
-          {emp_code: '50410', time: '5:55'},
-          {emp_code: '81505', time: '5:55'},
-          {emp_code: '80052', time: '5:55'},
-          {emp_code: '81506', time: '5:55'},
-          {emp_code: '80821', time: '5:55'},
-          {emp_code: '12129', time: '5:55'},
-          {emp_code: '80133', time: '5:55'},
-          {emp_code: '81248', time: '5:55'},
-          {emp_code: '90026', time: '5:55'},
-          {emp_code: '81220', time: '5:55'},
-          {emp_code: '81507', time: '5:55'},
-          {emp_code: '81469', time: '5:55'},
-          {emp_code: '12387', time: '5:56'},
-          {emp_code: '81132', time: '5:56'},
-          {emp_code: '80788', time: '5:56'},
-          {emp_code: '81508', time: '5:56'},
-          {emp_code: '90045', time: '5:56'},
-          {emp_code: '13111', time: '5:56'},
-          {emp_code: '81294', time: '5:56'},
-          {emp_code: '80820', time: '5:56'},
-          {emp_code: '12949', time: '5:56'},
-          {emp_code: '13153', time: '5:56'},
-          {emp_code: '11342', time: '5:56'},
-          {emp_code: '80899', time: '5:56'},
-          {emp_code: '80773', time: '5:56'},
-          {emp_code: '90064', time: '5:56'},
-          {emp_code: '81359', time: '5:56'},
-          {emp_code: '81282', time: '5:56'},
-          {emp_code: '81159', time: '5:56'},
-          {emp_code: '80092', time: '5:56'},
-          {emp_code: '80900', time: '5:56'},
-          {emp_code: '81361', time: '5:56'},
-          {emp_code: '80854', time: '5:56'},
-          {emp_code: '12727', time: '5:56'},
-          {emp_code: '12923', time: '5:56'},
-          {emp_code: '81360', time: '5:56'},
-          {emp_code: '81235', time: '5:56'},
-          {emp_code: '12073', time: '5:56'},
-          {emp_code: '81130', time: '5:57'},
-          {emp_code: '50454', time: '5:57'},
-          {emp_code: '81528', time: '5:57'},
-          {emp_code: '80884', time: '5:57'},
-          {emp_code: '50548', time: '5:57'},
-          {emp_code: '13134', time: '5:57'},
-          {emp_code: '81353', time: '5:57'},
-          {emp_code: '80102', time: '5:57'},
-          {emp_code: '81511', time: '5:57'},
-          {emp_code: '80106', time: '5:57'},
-          {emp_code: '13116', time: '5:57'},
-          {emp_code: '80800', time: '5:57'},
-          {emp_code: '50755', time: '5:57'},
-          {emp_code: '80953', time: '5:57'},
-          {emp_code: '81310', time: '5:57'},
-          {emp_code: '50409', time: '5:57'},
-          {emp_code: '81311', time: '5:57'},
-          {emp_code: '50804', time: '5:57'},
-          {emp_code: '81527', time: '5:57'},
-          {emp_code: '50560', time: '5:57'},
-          {emp_code: '80732', time: '5:57'},
-          {emp_code: '80728', time: '5:57'},
-          {emp_code: '81133', time: '5:57'},
-          {emp_code: '11671', time: '5:58'},
-          {emp_code: '81542', time: '5:58'},
-          {emp_code: '13130', time: '5:58'},
-          {emp_code: '90059', time: '5:58'},
-          {emp_code: '50799', time: '5:58'},
-          {emp_code: '10955', time: '5:58'},
-          {emp_code: '11210', time: '5:58'},
-          {emp_code: '50512', time: '5:58'},
-          {emp_code: '90040', time: '5:58'},
-          {emp_code: '81322', time: '5:58'},
-          {emp_code: '81320', time: '5:58'},
-          {emp_code: '81457', time: '5:58'},
-          {emp_code: '81487', time: '5:58'},
-          {emp_code: '12719', time: '5:58'},
-          {emp_code: '81429', time: '5:58'},
-          {emp_code: '50404', time: '5:58'},
-          {emp_code: '81458', time: '5:58'},
-          {emp_code: '81456', time: '5:59'},
-          {emp_code: '81514', time: '5:59'},
-          {emp_code: '12729', time: '5:59'},
-          {emp_code: '81496', time: '5:59'},
-          {emp_code: '11887', time: '5:59'},
-          {emp_code: '50772', time: '5:59'},
-          {emp_code: '81026', time: '5:59'},
-          {emp_code: '12318', time: '5:59'},
-          {emp_code: '50166', time: '5:59'},
-          {emp_code: '12708', time: '5:59'},
-          {emp_code: '50768', time: '5:59'},
-          {emp_code: '81536', time: '5:59'},
-          {emp_code: '81535', time: '5:59'},
-          {emp_code: '12430', time: '5:59'},
-          {emp_code: '81321', time: '5:59'},
-          {emp_code: '81148', time: '5:59'},
-          {emp_code: '81035', time: '5:59'},
-          {emp_code: '81222', time: '5:59'},
-          {emp_code: '50663', time: '5:59'},
-          {emp_code: '81223', time: '5:59'},
-          {emp_code: '81158', time: '5:59'},
-          {emp_code: '80330', time: '5:59'},
-          {emp_code: '10833', time: '6:00'},
-          {emp_code: '80050', time: '6:00'},
-          {emp_code: '11418', time: '6:00'},
-          {emp_code: '50382', time: '6:00'},
-          {emp_code: '13154', time: '6:00'},
-          {emp_code: '50516', time: '6:00'},
-          {emp_code: '80939', time: '6:00'},
-          {emp_code: '81246', time: '6:01'},
-          {emp_code: '81543', time: '6:01'},
-          {emp_code: '81063', time: '6:01'},
-          {emp_code: '81541', time: '6:01'},
-          {emp_code: '81242', time: '6:01'},
-          {emp_code: '10947', time: '6:01'},
-          {emp_code: '81495', time: '6:01'},
-          {emp_code: '50660', time: '6:01'},
-          {emp_code: '12859', time: '6:01'},
-          {emp_code: '81544', time: '6:01'},
-          {emp_code: '80153', time: '6:02'},
-          {emp_code: '50133', time: '6:02'},
-          {emp_code: '80525', time: '6:02'},
-          {emp_code: '11048', time: '6:03'},
-          {emp_code: '50519', time: '6:03'},
-          {emp_code: '50658', time: '6:04'},
-          {emp_code: '80001', time: '6:05'},
-          {emp_code: '80093', time: '6:07'},
-          {emp_code: '13178', time: '6:11'},
-          {emp_code: '81425', time: '6:12'},
-          {emp_code: '11447', time: '6:13'},
-          {emp_code: '80481', time: '6:31'},
-          {emp_code: '50408', time: '6:35'},
-          {emp_code: '80488', time: '6:58'},
-          {emp_code: '81291', time: '7:02'},
-          {emp_code: '80082', time: '7:34'},
-          {emp_code: '50203', time: '7:46'},
-          {emp_code: '80058', time: '7:47'},
-          {emp_code: '80053', time: '7:52'},
-          {emp_code: '81210', time: '7:52'},
-          {emp_code: '12843', time: '7:53'},
-          {emp_code: '50603', time: '7:53'},
-          {emp_code: '81196', time: '7:53'},
-          {emp_code: '13045', time: '7:53'},
-          {emp_code: '50628', time: '7:53'},
-          {emp_code: '13113', time: '7:53'},
-          {emp_code: '81499', time: '7:53'},
-          {emp_code: '50633', time: '7:53'},
-          {emp_code: '81498', time: '7:53'},
-          {emp_code: '80743', time: '7:53'},
-          {emp_code: '80742', time: '7:53'},
-          {emp_code: '80741', time: '7:54'},
-          {emp_code: '13122', time: '7:54'},
-          {emp_code: '80097', time: '7:54'},
-          {emp_code: '81211', time: '7:54'},
-          {emp_code: '81234', time: '7:54'},
-          {emp_code: '80671', time: '7:54'},
-          {emp_code: '80931', time: '7:54'},
-          {emp_code: '81209', time: '7:54'},
-          {emp_code: '81212', time: '7:54'},
-          {emp_code: '81213', time: '7:54'},
-          {emp_code: '81464', time: '7:54'},
-          {emp_code: '81312', time: '7:54'},
-          {emp_code: '81478', time: '7:54'},
-          {emp_code: '80669', time: '7:54'},
-          {emp_code: '81350', time: '7:54'},
-          {emp_code: '50518', time: '7:54'},
-          {emp_code: '11453', time: '7:54'},
-          {emp_code: '81434', time: '7:54'},
-          {emp_code: '81347', time: '7:54'},
-          {emp_code: '81183', time: '7:54'},
-          {emp_code: '81236', time: '7:54'},
-          {emp_code: '81033', time: '7:54'},
-          {emp_code: '13123', time: '7:55'},
-          {emp_code: '81032', time: '7:55'},
-          {emp_code: '13121', time: '7:55'},
-          {emp_code: '13120', time: '7:55'},
-          {emp_code: '50099', time: '7:55'},
-          {emp_code: '81034', time: '7:55'},
-          {emp_code: '50515', time: '7:55'},
-          {emp_code: '81198', time: '7:56'},
-          {emp_code: '81195', time: '7:56'},
-          {emp_code: '12614', time: '7:56'},
-          {emp_code: '80484', time: '7:56'},
-          {emp_code: '50106', time: '7:57'},
-          {emp_code: '12575', time: '7:57'},
-          {emp_code: '50397', time: '7:57'},
-          {emp_code: '11987', time: '7:57'},
-          {emp_code: '80891', time: '7:57'},
-          {emp_code: '81204', time: '7:57'},
-          {emp_code: '80890', time: '7:57'},
-          {emp_code: '12443', time: '7:57'},
-          {emp_code: '12561', time: '7:57'},
-          {emp_code: '81231', time: '7:57'},
-          {emp_code: '81147', time: '7:57'},
-          {emp_code: '12920', time: '7:57'},
-          {emp_code: '81205', time: '7:57'},
-          {emp_code: '80672', time: '7:57'},
-          {emp_code: '81199', time: '7:57'},
-          {emp_code: '50482', time: '7:57'},
-          {emp_code: '80680', time: '7:58'},
-          {emp_code: '81252', time: '7:58'},
-          {emp_code: '13105', time: '7:58'},
-          {emp_code: '50109', time: '7:58'},
-          {emp_code: '12106', time: '7:58'},
-          {emp_code: '50304', time: '7:58'},
-          {emp_code: '50091', time: '7:58'},
-          {emp_code: '50111', time: '7:58'},
-          {emp_code: '11044', time: '7:58'},
-          {emp_code: '50147', time: '7:58'},
-          {emp_code: '80662', time: '7:58'},
-          {emp_code: '80819', time: '7:58'},
-          {emp_code: '12317', time: '7:58'},
-          {emp_code: '13118', time: '7:58'},
-          {emp_code: '80673', time: '7:58'},
-          {emp_code: '81175', time: '7:58'},
-          {emp_code: '50420', time: '7:59'},
-          {emp_code: '50352', time: '7:59'},
-          {emp_code: '50547', time: '7:59'},
-          {emp_code: '81480', time: '7:59'},
-          {emp_code: '50334', time: '7:59'},
-          {emp_code: '50118', time: '7:59'},
-          {emp_code: '11271', time: '7:59'},
-          {emp_code: '50453', time: '7:59'},
-          {emp_code: '11440', time: '7:59'},
-          {emp_code: '12995', time: '7:59'},
-          {emp_code: '50381', time: '7:59'},
-          {emp_code: '81343', time: '7:59'},
-          {emp_code: '81295', time: '7:59'},
-          {emp_code: '80190', time: '7:59'},
-          {emp_code: '80688', time: '7:59'},
-          {emp_code: '50456', time: '8:00'},
-          {emp_code: '50079', time: '8:00'},
-          {emp_code: '50113', time: '8:00'},
-          {emp_code: '50185', time: '8:00'},
-          {emp_code: '50763', time: '8:00'},
-          {emp_code: '50309', time: '8:00'},
-          {emp_code: '90060', time: '8:00'},
-          {emp_code: '50168', time: '8:01'},
-          {emp_code: '50092', time: '8:01'},
-          {emp_code: '50117', time: '8:01'},
-          {emp_code: '50805', time: '8:01'},
-          {emp_code: '50097', time: '8:01'},
-          {emp_code: '12305', time: '8:01'},
-          {emp_code: '12175', time: '8:01'},
-          {emp_code: '50167', time: '8:01'},
-          {emp_code: '12067', time: '8:01'},
-          {emp_code: '13145', time: '8:01'},
-          {emp_code: '50123', time: '8:01'},
-          {emp_code: '50100', time: '8:01'},
-          {emp_code: '50169', time: '8:01'},
-          {emp_code: '12903', time: '8:01'},
-          {emp_code: '12148', time: '8:01'},
-          {emp_code: '12429', time: '8:01'},
-          {emp_code: '12889', time: '8:01'},
-          {emp_code: '81111', time: '8:02'},
-          {emp_code: '13018', time: '8:02'},
-          {emp_code: '50554', time: '8:02'},
-          {emp_code: '12893', time: '8:02'},
-          {emp_code: '50582', time: '8:02'},
-          {emp_code: '13132', time: '8:02'},
-          {emp_code: '50640', time: '8:02'},
-          {emp_code: '80770', time: '8:02'},
-          {emp_code: '12723', time: '8:02'},
-          {emp_code: '12155', time: '8:02'},
-          {emp_code: '81334', time: '8:02'},
-          {emp_code: '12234', time: '8:02'},
-          {emp_code: '80739', time: '8:02'},
-          {emp_code: '12158', time: '8:02'},
-          {emp_code: '50689', time: '8:02'},
-          {emp_code: '12351', time: '8:02'},
-          {emp_code: '13117', time: '8:02'},
-          {emp_code: '50412', time: '8:02'},
-          {emp_code: '12996', time: '8:02'},
-          {emp_code: '50771', time: '8:02'},
-          {emp_code: '50433', time: '8:02'},
-          {emp_code: '50114', time: '8:02'},
-          {emp_code: '80661', time: '8:02'},
-          {emp_code: '80747', time: '8:02'},
-          {emp_code: '12358', time: '8:02'},
-          {emp_code: '50829', time: '8:02'},
-          {emp_code: '13141', time: '8:02'},
-          {emp_code: '12546', time: '8:02'},
-          {emp_code: '50101', time: '8:02'},
-          {emp_code: '80768', time: '8:03'},
-          {emp_code: '50765', time: '8:03'},
-          {emp_code: '12037', time: '8:03'},
-          {emp_code: '12431', time: '8:03'},
-          {emp_code: '12006', time: '8:03'},
-          {emp_code: '12183', time: '8:03'},
-          {emp_code: '80765', time: '8:03'},
-          {emp_code: '50550', time: '8:03'},
-          {emp_code: '12948', time: '8:03'},
-          {emp_code: '81432', time: '8:03'},
-          {emp_code: '50059', time: '8:03'},
-          {emp_code: '81431', time: '8:03'},
-          {emp_code: '80797', time: '8:04'},
-          {emp_code: '50673', time: '8:05'},
-          {emp_code: '50553', time: '8:05'},
-          {emp_code: '50470', time: '8:05'},
-          {emp_code: '50440', time: '8:06'},
-          {emp_code: '50609', time: '8:06'},
-          {emp_code: '50483', time: '8:07'},
-          {emp_code: '13094', time: '8:07'},
-          {emp_code: '50354', time: '8:07'},
-          {emp_code: '50815', time: '8:10'},
-          {emp_code: '50538', time: '8:10'},
-          {emp_code: '50335', time: '8:10'},
-          {emp_code: '80885', time: '8:10'},
-          {emp_code: '50108', time: '8:10'},
-          {emp_code: '50437', time: '8:10'},
-          {emp_code: '13127', time: '8:10'},
-          {emp_code: '90034', time: '8:10'},
-          {emp_code: '11072', time: '8:10'},
-          {emp_code: '13151', time: '8:10'},
-          {emp_code: '81433', time: '8:10'},
-          {emp_code: '50641', time: '8:10'},
-          {emp_code: '50620', time: '8:10'},
-          {emp_code: '50383', time: '8:10'},
-          {emp_code: '50183', time: '8:11'},
-          {emp_code: '50379', time: '8:11'},
-          {emp_code: '50622', time: '8:11'},
-          {emp_code: '50395', time: '8:11'},
-          {emp_code: '50896', time: '8:11'},
-          {emp_code: '50527', time: '8:11'},
-          {emp_code: '11618', time: '8:11'},
-          {emp_code: '81206', time: '8:11'},
-          {emp_code: '81200', time: '8:11'},
-          {emp_code: '50347', time: '8:11'},
-          {emp_code: '50093', time: '8:11'},
-          {emp_code: '50384', time: '8:11'},
-          {emp_code: '50623', time: '8:11'},
-          {emp_code: '50605', time: '8:12'},
-          {emp_code: '80009', time: '8:12'},
-          {emp_code: '80074', time: '8:12'},
-          {emp_code: '50451', time: '8:13'},
-          {emp_code: '50485', time: '8:13'},
-          {emp_code: '50468', time: '8:13'},
-          {emp_code: '50486', time: '8:13'},
-          {emp_code: '50429', time: '8:13'},
-          {emp_code: '12026', time: '8:14'},
-          {emp_code: '50327', time: '8:14'},
-          {emp_code: '11014', time: '8:14'},
-          {emp_code: '50513', time: '8:14'},
-          {emp_code: '50795', time: '8:14'},
-          {emp_code: '50469', time: '8:14'},
-          {emp_code: '12728', time: '8:14'},
-          {emp_code: '90032', time: '8:14'},
-          {emp_code: '90020', time: '8:14'},
-          {emp_code: '50493', time: '8:15'},
-          {emp_code: '50071', time: '8:15'},
-          {emp_code: '50666', time: '8:15'},
-          {emp_code: '50036', time: '8:15'},
-          {emp_code: '50077', time: '8:16'},
-          {emp_code: '50320', time: '8:16'},
-          {emp_code: '50170', time: '8:16'},
-          {emp_code: '12010', time: '8:17'},
-          {emp_code: '11889', time: '8:17'},
-          {emp_code: '50648', time: '8:17'},
-          {emp_code: '50130', time: '8:17'},
-          {emp_code: '80041', time: '8:17'},
-          {emp_code: '50094', time: '8:18'},
-          {emp_code: '11334', time: '8:20'},
-          {emp_code: '50632', time: '8:21'},
-          {emp_code: '50121', time: '8:21'},
-          {emp_code: '50180', time: '8:22'},
-          {emp_code: '50323', time: '8:23'},
-          {emp_code: '50501', time: '8:23'},
-          {emp_code: '50350', time: '8:23'},
-          {emp_code: '50686', time: '8:23'},
-          {emp_code: '50083', time: '8:23'},
-          {emp_code: '50348', time: '8:23'},
-          {emp_code: '11518', time: '8:23'},
-          {emp_code: '50444', time: '8:23'},
-          {emp_code: '50110', time: '8:23'},
-          {emp_code: '50128', time: '8:23'},
-          {emp_code: '50610', time: '8:23'},
-          {emp_code: '12825', time: '8:23'},
-          {emp_code: '11157', time: '8:23'},
-          {emp_code: '12579', time: '8:23'},
-          {emp_code: '50182', time: '8:23'},
-          {emp_code: '50333', time: '8:23'},
-          {emp_code: '50041', time: '8:23'},
-          {emp_code: '50368', time: '8:24'},
-          {emp_code: '50500', time: '8:24'},
-          {emp_code: '80921', time: '8:24'},
-          {emp_code: '50536', time: '8:24'},
-          {emp_code: '80476', time: '8:24'},
-          {emp_code: '50475', time: '8:24'},
-          {emp_code: '50662', time: '8:25'},
-          {emp_code: '50086', time: '8:25'},
-          {emp_code: '50049', time: '8:25'},
-          {emp_code: '50390', time: '8:25'},
-          {emp_code: '50186', time: '8:25'},
-          {emp_code: '50385', time: '8:25'},
-          {emp_code: '50126', time: '8:25'},
-          {emp_code: '50058', time: '8:25'},
-          {emp_code: '50602', time: '8:25'},
-          {emp_code: '50436', time: '8:25'},
-          {emp_code: '50430', time: '8:25'},
-          {emp_code: '50421', time: '8:25'},
-          {emp_code: '50597', time: '8:26'},
-          {emp_code: '80108', time: '8:26'},
-          {emp_code: '11452', time: '8:26'},
-          {emp_code: '50629', time: '8:26'},
-          {emp_code: '50405', time: '8:26'},
-          {emp_code: '50401', time: '8:27'},
-          {emp_code: '50634', time: '8:27'},
-          {emp_code: '50599', time: '8:27'},
-          {emp_code: '81007', time: '8:28'},
-          {emp_code: '50595', time: '8:28'},
-          {emp_code: '50391', time: '8:28'},
-          {emp_code: '50089', time: '8:28'},
-          {emp_code: '50137', time: '8:28'},
-          {emp_code: '50671', time: '8:29'},
-          {emp_code: '50362', time: '8:29'},
-          {emp_code: '00016', time: '8:30'},
-          {emp_code: '50047', time: '8:30'},
-          {emp_code: '50129', time: '8:30'},
-          {emp_code: '50139', time: '8:30'},
-          {emp_code: '50201', time: '8:30'},
-          {emp_code: '50300', time: '8:30'},
-          {emp_code: '50331', time: '8:30'},
-          {emp_code: '50539', time: '8:30'},
-          {emp_code: '50757', time: '8:30'},
-          {emp_code: '50756', time: '8:30'},
-          {emp_code: '50386', time: '9:01'},
-          {emp_code: '50672', time: '10:17'},
-          {emp_code: '50318', time: '10:25'},
-          {emp_code: '80933', time: '10:34'},
-          {emp_code: '50400', time: '13:38'},
-          {emp_code: '11198', time: '13:39'},
-          {emp_code: '11377', time: '13:41'},
-          {emp_code: '81013', time: '13:43'},
-          {emp_code: '11595', time: '13:45'},
-          {emp_code: '80191', time: '13:45'},
-          {emp_code: '50656', time: '13:47'},
-          {emp_code: '81005', time: '13:48'},
-          {emp_code: '50657', time: '13:48'},
-          {emp_code: '80051', time: '13:48'},
-          {emp_code: '50766', time: '13:48'},
-          {emp_code: '81038', time: '13:49'},
-          {emp_code: '50751', time: '13:49'},
-          {emp_code: '50455', time: '13:49'},
-          {emp_code: '80045', time: '13:49'},
-          {emp_code: '80816', time: '13:49'},
-          {emp_code: '50682', time: '13:49'},
-          {emp_code: '81413', time: '13:49'},
-          {emp_code: '12712', time: '13:50'},
-          {emp_code: '50596', time: '13:50'},
-          {emp_code: '11551', time: '13:50'},
-          {emp_code: '11118', time: '13:50'},
-          {emp_code: '80930', time: '13:50'},
-          {emp_code: '12722', time: '13:50'},
-          {emp_code: '81020', time: '13:50'},
-          {emp_code: '11054', time: '13:50'},
-          {emp_code: '81078', time: '13:50'},
-          {emp_code: '81022', time: '13:51'},
-          {emp_code: '81285', time: '13:51'},
-          {emp_code: '80667', time: '13:51'},
-          {emp_code: '80007', time: '13:51'},
-          {emp_code: '81036', time: '13:51'},
-          {emp_code: '50652', time: '13:51'},
-          {emp_code: '81376', time: '13:51'},
-          {emp_code: '50466', time: '13:51'},
-          {emp_code: '81375', time: '13:51'},
-          {emp_code: '81374', time: '13:51'},
-          {emp_code: '13099', time: '13:51'},
-          {emp_code: '80704', time: '13:51'},
-          {emp_code: '13097', time: '13:52'},
-          {emp_code: '80845', time: '13:52'},
-          {emp_code: '80841', time: '13:52'},
-          {emp_code: '13102', time: '13:52'},
-          {emp_code: '80842', time: '13:52'},
-          {emp_code: '13041', time: '13:52'},
-          {emp_code: '80067', time: '13:52'},
-          {emp_code: '50669', time: '13:52'},
-          {emp_code: '80686', time: '13:52'},
-          {emp_code: '81268', time: '13:52'},
-          {emp_code: '81517', time: '13:52'},
-          {emp_code: '13146', time: '13:52'},
-          {emp_code: '80668', time: '13:52'},
-          {emp_code: '80875', time: '13:52'},
-          {emp_code: '90077', time: '13:52'},
-          {emp_code: '81308', time: '13:52'},
-          {emp_code: '12587', time: '13:52'},
-          {emp_code: '80004', time: '13:52'},
-          {emp_code: '13164', time: '13:53'},
-          {emp_code: '80008', time: '13:53'},
-          {emp_code: '13115', time: '13:53'},
-          {emp_code: '80733', time: '13:53'},
-          {emp_code: '90071', time: '13:53'},
-          {emp_code: '81298', time: '13:53'},
-          {emp_code: '81286', time: '13:53'},
-          {emp_code: '81530', time: '13:53'},
-          {emp_code: '50509', time: '13:53'},
-          {emp_code: '80076', time: '13:53'},
-          {emp_code: '50471', time: '13:53'},
-          {emp_code: '13096', time: '13:53'},
-          {emp_code: '81339', time: '13:53'},
-          {emp_code: '13081', time: '13:53'},
-          {emp_code: '81251', time: '13:53'},
-          {emp_code: '81103', time: '13:53'},
-          {emp_code: '80684', time: '13:53'},
-          {emp_code: '81221', time: '13:53'},
-          {emp_code: '80612', time: '13:53'},
-          {emp_code: '81233', time: '13:54'},
-          {emp_code: '81497', time: '13:54'},
-          {emp_code: '50502', time: '13:54'},
-          {emp_code: '81500', time: '13:54'},
-          {emp_code: '50399', time: '13:54'},
-          {emp_code: '50803', time: '13:54'},
-          {emp_code: '81501', time: '13:54'},
-          {emp_code: '80705', time: '13:54'},
-          {emp_code: '80703', time: '13:54'},
-          {emp_code: '81328', time: '13:54'},
-          {emp_code: '81512', time: '13:54'},
-          {emp_code: '81327', time: '13:54'},
-          {emp_code: '50608', time: '13:54'},
-          {emp_code: '81335', time: '13:54'},
-          {emp_code: '81513', time: '13:54'},
-          {emp_code: '81502', time: '13:54'},
-          {emp_code: '81479', time: '13:54'},
-          {emp_code: '81503', time: '13:55'},
-          {emp_code: '80049', time: '13:55'},
-          {emp_code: '13131', time: '13:55'},
-          {emp_code: '81515', time: '13:55'},
-          {emp_code: '80065', time: '13:56'},
-          {emp_code: '90047', time: '13:56'},
-          {emp_code: '80101', time: '13:56'},
-          {emp_code: '81518', time: '13:56'},
-          {emp_code: '50801', time: '13:56'},
-          {emp_code: '12585', time: '13:56'},
-          {emp_code: '50127', time: '13:57'},
-          {emp_code: '50131', time: '13:57'},
-          {emp_code: '80729', time: '13:57'},
-          {emp_code: '80889', time: '13:57'},
-          {emp_code: '50413', time: '13:57'},
-          {emp_code: '50667', time: '13:57'},
-          {emp_code: '50403', time: '13:57'},
-          {emp_code: '81303', time: '13:57'},
-          {emp_code: '81126', time: '13:57'},
-          {emp_code: '12963', time: '13:57'},
-          {emp_code: '13157', time: '13:58'},
-          {emp_code: '90029', time: '13:58'},
-          {emp_code: '11165', time: '13:58'},
-          {emp_code: '80075', time: '13:58'},
-          {emp_code: '12108', time: '13:58'},
-          {emp_code: '81155', time: '13:58'},
-          {emp_code: '13136', time: '13:58'},
-          {emp_code: '81160', time: '13:59'},
-          {emp_code: '50668', time: '13:59'},
-          {emp_code: '11172', time: '13:59'},
-          {emp_code: '81156', time: '13:59'},
-          {emp_code: '50752', time: '13:59'},
-          {emp_code: '50406', time: '13:59'},
-          {emp_code: '11485', time: '13:59'},
-          {emp_code: '13029', time: '13:59'},
-          {emp_code: '50655', time: '13:59'},
-          {emp_code: '80489', time: '13:59'},
-          {emp_code: '50559', time: '13:59'},
-          {emp_code: '81146', time: '13:59'},
-          {emp_code: '13180', time: '13:59'},
-          {emp_code: '81002', time: '13:59'},
-          {emp_code: '13100', time: '13:59'},
-          {emp_code: '81363', time: '14:00'},
-          {emp_code: '13148', time: '14:00'},
-          {emp_code: '13155', time: '14:00'},
-          {emp_code: '81364', time: '14:00'},
-          {emp_code: '11661', time: '14:00'},
-          {emp_code: '50134', time: '14:00'},
-          {emp_code: '50600', time: '14:00'},
-          {emp_code: '81304', time: '14:01'},
-          {emp_code: '81309', time: '14:01'},
-          {emp_code: '80793', time: '14:01'},
-          {emp_code: '50514', time: '14:01'},
-          {emp_code: '12211', time: '14:06'},
-          {emp_code: '81534', time: '14:10'},
-          {emp_code: '81538', time: '14:10'},
-          {emp_code: '81537', time: '14:10'},
-          {emp_code: '13183', time: '14:15'},
-          {emp_code: '50809', time: '14:17'},
-          {emp_code: '11311', time: '14:19'},
-          {emp_code: '50132', time: '14:23'},
-          {emp_code: '50411', time: '17:11'},
-          {emp_code: '50687', time: '17:15'},
-          {emp_code: '80780', time: '17:26'},
-          {emp_code: '11576', time: '17:29'},
-          {emp_code: '80974', time: '17:44'},
-          {emp_code: '80060', time: '17:51'},
-          {emp_code: '11361', time: '17:51'},
-          {emp_code: '90009', time: '17:51'},
-          {emp_code: '90068', time: '17:51'},
-          {emp_code: '13073', time: '17:52'},
-          {emp_code: '80313', time: '17:52'},
-          {emp_code: '11717', time: '17:52'},
-          {emp_code: '11983', time: '17:52'},
-          {emp_code: '11438', time: '17:52'},
-          {emp_code: '80756', time: '17:52'},
-          {emp_code: '11332', time: '17:53'},
-          {emp_code: '80192', time: '17:53'},
-          {emp_code: '81075', time: '17:53'},
-          {emp_code: '12786', time: '17:53'},
-          {emp_code: '11753', time: '17:53'},
-          {emp_code: '80042', time: '17:53'},
-          {emp_code: '81060', time: '17:53'},
-          {emp_code: '81050', time: '17:53'},
-          {emp_code: '11645', time: '17:53'},
-          {emp_code: '11716', time: '17:53'},
-          {emp_code: '12711', time: '17:53'},
-          {emp_code: '80027', time: '17:53'},
-          {emp_code: '11747', time: '17:53'},
-          {emp_code: '81090', time: '17:54'},
-          {emp_code: '80012', time: '17:54'},
-          {emp_code: '81243', time: '17:54'},
-          {emp_code: '81446', time: '17:54'},
-          {emp_code: '81453', time: '17:54'},
-          {emp_code: '80753', time: '17:54'},
-          {emp_code: '90079', time: '17:54'},
-          {emp_code: '11649', time: '17:54'},
-          {emp_code: '90062', time: '17:55'},
-          {emp_code: '80098', time: '17:55'},
-          {emp_code: '50398', time: '17:57'},
-          {emp_code: '80838', time: '17:57'},
-          {emp_code: '81082', time: '17:57'},
-          {emp_code: '81072', time: '17:58'},
-          {emp_code: '80999', time: '17:58'},
-          {emp_code: '81024', time: '17:58'},
-          {emp_code: '81190', time: '17:58'},
-          {emp_code: '81463', time: '17:58'},
-          {emp_code: '81462', time: '17:59'},
-          {emp_code: '81170', time: '17:59'},
-          {emp_code: '00013', time: '18:00'},
-          {emp_code: '80181', time: '18:02'},
-          {emp_code: '11443', time: '18:02'},
-          {emp_code: '12714', time: '18:05'},
-          {emp_code: '12224', time: '18:12'},
-          {emp_code: '13114', time: '18:12'},
-          {emp_code: '81027', time: '20:02'},
-          {emp_code: '12716', time: '20:59'},
-          {emp_code: '50561', time: '21:41'},
-          {emp_code: '50506', time: '21:43'},
-          {emp_code: '81012', time: '21:44'},
-          {emp_code: '81037', time: '21:45'},
-          {emp_code: '80479', time: '21:45'},
-          {emp_code: '12717', time: '21:46'},
-          {emp_code: '12725', time: '21:46'},
-          {emp_code: '50647', time: '21:48'},
-          {emp_code: '80683', time: '21:49'},
-          {emp_code: '81293', time: '21:49'},
-          {emp_code: '81300', time: '21:49'},
-          {emp_code: '80882', time: '21:49'},
-          {emp_code: '80883', time: '21:49'},
-          {emp_code: '80881', time: '21:49'},
-          {emp_code: '80852', time: '21:49'},
-          {emp_code: '13109', time: '21:49'},
-          {emp_code: '80702', time: '21:49'},
-          {emp_code: '81186', time: '21:50'},
-          {emp_code: '13144', time: '21:50'},
-          {emp_code: '11333', time: '21:50'},
-          {emp_code: '81411', time: '21:50'},
-          {emp_code: '80096', time: '21:50'},
-          {emp_code: '90035', time: '21:50'},
-          {emp_code: '13173', time: '21:50'},
-          {emp_code: '81337', time: '21:50'},
-          {emp_code: '11255', time: '21:50'},
-          {emp_code: '80961', time: '21:50'},
-          {emp_code: '81522', time: '21:50'},
-          {emp_code: '81519', time: '21:50'},
-          {emp_code: '81149', time: '21:50'},
-          {emp_code: '81144', time: '21:50'},
-          {emp_code: '81154', time: '21:50'},
-          {emp_code: '12021', time: '21:50'},
-          {emp_code: '80061', time: '21:50'},
-          {emp_code: '50465', time: '21:50'},
-          {emp_code: '11648', time: '21:50'},
-          {emp_code: '81521', time: '21:50'},
-          {emp_code: '11215', time: '21:50'},
-          {emp_code: '50624', time: '21:50'},
-          {emp_code: '80988', time: '21:50'},
-          {emp_code: '12386', time: '21:50'},
-          {emp_code: '12718', time: '21:50'},
-          {emp_code: '81141', time: '21:50'},
-          {emp_code: '81077', time: '21:50'},
-          {emp_code: '50464', time: '21:51'},
-          {emp_code: '81008', time: '21:51'},
-          {emp_code: '81520', time: '21:51'},
-          {emp_code: '50415', time: '21:51'},
-          {emp_code: '80949', time: '21:51'},
-          {emp_code: '81545', time: '21:51'},
-          {emp_code: '81532', time: '21:51'},
-          {emp_code: '80858', time: '21:51'},
-          {emp_code: '80755', time: '21:51'},
-          {emp_code: '80629', time: '21:51'},
-          {emp_code: '81345', time: '21:51'},
-          {emp_code: '80738', time: '21:51'},
-          {emp_code: '81197', time: '21:51'},
-          {emp_code: '81546', time: '21:51'},
-          {emp_code: '50659', time: '21:51'},
-          {emp_code: '81421', time: '21:52'},
-          {emp_code: '81489', time: '21:52'},
-          {emp_code: '81490', time: '21:52'},
-          {emp_code: '81217', time: '21:52'},
-          {emp_code: '80048', time: '21:52'},
-          {emp_code: '81473', time: '21:52'},
-          {emp_code: '81465', time: '21:53'},
-          {emp_code: '80837', time: '21:53'},
-          {emp_code: '80693', time: '21:53'},
-          {emp_code: '80692', time: '21:53'},
-          {emp_code: '13162', time: '21:53'},
-          {emp_code: '81237', time: '21:53'},
-          {emp_code: '80802', time: '21:53'},
-          {emp_code: '13171', time: '21:53'},
-          {emp_code: '81228', time: '21:53'},
-          {emp_code: '80727', time: '21:53'},
-          {emp_code: '80670', time: '21:53'},
-          {emp_code: '80832', time: '21:53'},
-          {emp_code: '13106', time: '21:53'},
-          {emp_code: '81504', time: '21:53'},
-          {emp_code: '80677', time: '21:53'},
-          {emp_code: '81250', time: '21:53'},
-          {emp_code: '81481', time: '21:53'},
-          {emp_code: '81264', time: '21:53'},
-          {emp_code: '13137', time: '21:54'},
-          {emp_code: '80835', time: '21:54'},
-          {emp_code: '81523', time: '21:54'},
-          {emp_code: '81287', time: '21:54'},
-          {emp_code: '81305', time: '21:54'},
-          {emp_code: '80869', time: '21:54'},
-          {emp_code: '81193', time: '21:54'},
-          {emp_code: '80866', time: '21:54'},
-          {emp_code: '80095', time: '21:54'},
-          {emp_code: '80874', time: '21:54'},
-          {emp_code: '80826', time: '21:54'},
-          {emp_code: '13124', time: '21:54'},
-          {emp_code: '81352', time: '21:54'},
-          {emp_code: '13098', time: '21:54'},
-          {emp_code: '13119', time: '21:54'},
-          {emp_code: '81266', time: '21:54'},
-          {emp_code: '13103', time: '21:54'},
-          {emp_code: '80868', time: '21:54'},
-          {emp_code: '81547', time: '21:54'},
-          {emp_code: '81265', time: '21:54'},
-          {emp_code: '12403', time: '21:54'},
-          {emp_code: '81367', time: '21:54'},
-          {emp_code: '50402', time: '21:54'},
-          {emp_code: '50754', time: '21:54'},
-          {emp_code: '13107', time: '21:54'},
-          {emp_code: '12570', time: '21:55'},
-          {emp_code: '81201', time: '21:55'},
-          {emp_code: '81466', time: '21:55'},
-          {emp_code: '81417', time: '21:55'},
-          {emp_code: '81207', time: '21:55'},
-          {emp_code: '80107', time: '21:55'},
-          {emp_code: '12726', time: '21:55'},
-          {emp_code: '13187', time: '21:55'},
-          {emp_code: '80090', time: '21:55'},
-          {emp_code: '81225', time: '21:55'},
-          {emp_code: '81548', time: '21:55'},
-          {emp_code: '81483', time: '21:55'},
-          {emp_code: '50631', time: '21:55'},
-          {emp_code: '81253', time: '21:55'},
-          {emp_code: '81416', time: '21:55'},
-          {emp_code: '81203', time: '21:55'},
-          {emp_code: '80798', time: '21:55'},
-          {emp_code: '81224', time: '21:55'},
-          {emp_code: '80796', time: '21:55'},
-          {emp_code: '81531', time: '21:55'},
-          {emp_code: '80985', time: '21:55'},
-          {emp_code: '81549', time: '21:55'},
-          {emp_code: '81014', time: '21:55'},
-          {emp_code: '80413', time: '21:56'},
-          {emp_code: '81539', time: '21:56'},
-          {emp_code: '81239', time: '21:56'},
-          {emp_code: '50661', time: '21:56'},
-          {emp_code: '81418', time: '21:56'},
-          {emp_code: '81437', time: '21:56'},
-          {emp_code: '11135', time: '21:56'},
-          {emp_code: '50769', time: '21:57'},
-          {emp_code: '13159', time: '21:57'},
-          {emp_code: '80421', time: '21:58'},
-          {emp_code: '50549', time: '21:58'},
-          {emp_code: '50626', time: '21:58'},
-          {emp_code: '50517', time: '21:59'},
-          {emp_code: '50546', time: '22:00'},
-          {emp_code: '80091', time: '22:00'},
-          {emp_code: '90074', time: '22:00'},
-          {emp_code: '80043', time: '22:00'},
-          {emp_code: '81010', time: '22:02'},
-          {emp_code: '12799', time: '22:05'},
-          {emp_code: '50443', time: '22:06'},
-          {emp_code: '81009', time: '22:06'},
-          {emp_code: '13149', time: '22:10'},
-          {emp_code: '12244', time: '22:10'},
-          {emp_code: '81259', time: '22:11'},
-          {emp_code: '81331', time: '22:12'},
-          {emp_code: '50800', time: '22:31'},
-          {emp_code: '50802', time: '22:32'},          
-        ]
-
+          {emp_code:'10001',time: yesterday + '05:55'},
+          {emp_code:'10002',time: yesterday + '08:30'},
+          {emp_code:'10003',time: yesterday + '08:20'},
+          {emp_code:'10004',time: yesterday + '06:00'},
+          {emp_code:'10005',time: yesterday + '14:15'},
+          {emp_code:'10006',time: yesterday + '22:50'},
+          {emp_code:'10007',time: yesterday + '05:20'},
+          {emp_code:'10008',time: yesterday + '19:30'},
+          {emp_code:'10009',time: yesterday + '13:30'},
+          {emp_code:'10010',time: yesterday + '06:15'},
+          {emp_code:'10011',time: yesterday + '17:30'},
+          {emp_code:'10012',time: yesterday + '05:30'},
+          {emp_code:'10013',time: yesterday + '08:38'},
+          {emp_code:'10014',time: yesterday + '08:38'},
+          {emp_code:'10015',time: yesterday + '22:15'},
+          {emp_code:'10016',time: yesterday + '05:30'},
+          {emp_code:'10017',time: yesterday + '18:15'},
+          {emp_code:'90000',time: yesterday + '06:15'},
+          {emp_code:'90000',time: yesterday + '08:45'},
+          {emp_code:'90000',time: yesterday + '14:15'},
+          {emp_code:'90000',time: yesterday + '18:15'},
+          {emp_code:'90000',time: yesterday + '22:15'},
+        ];
 
         var tempout = [
-          {emp_code: '80472', time: '18:16'},
-          {emp_code: '50526', time: '13:00'},
-          {emp_code: '80035', time: '18:01'},
-          {emp_code: '90039', time: '17:11'},
-          {emp_code: '12731', time: '18:10'},
-          {emp_code: '50510', time: '14:21'},
-          {emp_code: '50463', time: '17:15'},
-          {emp_code: '11489', time: '18:35'},
-          {emp_code: '50625', time: '18:22'},
-          {emp_code: '11312', time: '18:17'},
-          {emp_code: '90046', time: '16:00'},
-          {emp_code: '80976', time: '18:12'},
-          {emp_code: '80200', time: '14:11'},
-          {emp_code: '80975', time: '18:10'},
-          {emp_code: '80485', time: '16:10'},
-          {emp_code: '80059', time: '18:03'},
-          {emp_code: '80047', time: '18:10'},
-          {emp_code: '80218', time: '18:10'},
-          {emp_code: '50462', time: '14:22'},
-          {emp_code: '90069', time: '18:14'},
-          {emp_code: '81289', time: '14:22'},
-          {emp_code: '80711', time: '18:10'},
-          {emp_code: '80094', time: '17:13'},
-          {emp_code: '81290', time: '14:22'},
-          {emp_code: '80818', time: '18:12'},
-          {emp_code: '80477', time: '18:12'},
-          {emp_code: '81098', time: '18:12'},
-          {emp_code: '11449', time: '18:12'},
-          {emp_code: '81171', time: '18:12'},
-          {emp_code: '50654', time: '16:00'},
-          {emp_code: '12446', time: '18:14'},
-          {emp_code: '11043', time: '19:16'},
-          {emp_code: '81477', time: '14:11'},
-          {emp_code: '50753', time: '14:17'},
-          {emp_code: '13139', time: '18:10'},
-          {emp_code: '80675', time: '18:07'},
-          {emp_code: '80005', time: '17:13'},
-          {emp_code: '13160', time: '18:14'},
-          {emp_code: '80003', time: '17:11'},
-          {emp_code: '80046', time: '18:12'},
-          {emp_code: '80483', time: '18:06'},
-          {emp_code: '81125', time: '18:10'},
-          {emp_code: '12972', time: '18:16'},
-          {emp_code: '50650', time: '18:13'},
-          {emp_code: '80496', time: '14:09'},
-          {emp_code: '12817', time: '18:17'},
+          {emp_code:'10001',time: yesterday + '14:20'},
+          {emp_code:'10002',time: yesterday + '17:30'},
+          {emp_code:'10003',time: yesterday + '17:15'},
+          {emp_code:'10004',time: yesterday + '14:25'},
+          {emp_code:'10005',time: yesterday + '22:00'},
+          {emp_code:'10006',time: today + '05:30'},
+          {emp_code:'10007',time: yesterday + '15:00'},
+          {emp_code:'10008',time: today + '05:55'},
+          {emp_code:'10009',time: yesterday + '22:30'},
+          {emp_code:'10010',time: yesterday + '13:30'},
+          {emp_code:'10011',time: today + '03:00'},
+          {emp_code:'10012',time: yesterday + '15:00'},
+          {emp_code:'10013',time: yesterday + '17:30'},
+          {emp_code:'10014',time: yesterday + '17:45'},
+          {emp_code:'10015',time: today + '07:00'},
+          {emp_code:'10016',time: yesterday + '19:30'},
+          {emp_code:'10017',time: today + '06:30'}
+        ];
 
-          {emp_code: '80736', time: '18:11'},
-          {emp_code: '50798', time: '17:18'},
-          {emp_code: '50639', time: '16:00'},
-          {emp_code: '80817', time: '18:13'},
-          {emp_code: '50653', time: '14:12'},
-          {emp_code: '13152', time: '14:14'},
-          {emp_code: '11304', time: '19:29'},
-          {emp_code: '50627', time: '18:34'},
-          {emp_code: '11652', time: '18:16'},
-          {emp_code: '13110', time: '18:08'},
-          {emp_code: '12709', time: '19:20'},
-          {emp_code: '81218', time: '18:10'},
-          {emp_code: '12730', time: '17:14'},
-          {emp_code: '12974', time: '18:11'},
-          {emp_code: '13104', time: '18:12'},
-          {emp_code: '50484', time: '18:08'},
-          {emp_code: '80064', time: '18:14'},
-          {emp_code: '80357', time: '18:09'},
-          {emp_code: '11062', time: '18:13'},
-          {emp_code: '80929', time: '18:14'},
-          {emp_code: '13140', time: '18:12'},
-          {emp_code: '80995', time: '18:13'},
-          {emp_code: '81346', time: '14:16'},
-          {emp_code: '50767', time: '14:22'},
-          {emp_code: '80750', time: '18:10'},
-          {emp_code: '11345', time: '18:12'},
-          {emp_code: '81486', time: '18:13'},
-          {emp_code: '13158', time: '14:11'},
-          {emp_code: '50601', time: '14:05'},
-          {emp_code: '80977', time: '14:10'},
-          {emp_code: '13150', time: '14:10'},
-          {emp_code: '81041', time: '14:10'},
-          {emp_code: '11269', time: '18:15'},
-          {emp_code: '12715', time: '18:12'},
-          {emp_code: '80077', time: '14:31'},
-          {emp_code: '13133', time: '18:07'},
-          {emp_code: '12710', time: '18:11'},
-          {emp_code: '81482', time: '14:16'},
-          {emp_code: '81485', time: '14:16'},
-          {emp_code: '12851', time: '18:06'},
-          {emp_code: '81484', time: '14:16'},
-          {emp_code: '81526', time: '14:11'},
-          {emp_code: '80992', time: '14:16'},
-          {emp_code: '12846', time: '14:15'},
-          {emp_code: '13142', time: '17:24'},
-          {emp_code: '50649', time: '14:24'},
-          {emp_code: '81430', time: '18:12'},
-          {emp_code: '81058', time: '18:14'},
-          {emp_code: '80709', time: '18:11'},
-          {emp_code: '81262', time: '14:16'},
-          {emp_code: '81088', time: '18:11'},
-          {emp_code: '81256', time: '14:10'},
-          {emp_code: '81087', time: '14:12'},
-          {emp_code: '81261', time: '14:16'},
-          {emp_code: '81449', time: '18:12'},
-          {emp_code: '80712', time: '14:10'},
-          {emp_code: '80927', time: '14:17'},
-          {emp_code: '13135', time: '18:13'},
-          {emp_code: '81338', time: '18:00'},
-          {emp_code: '81131', time: '14:12'},
-          {emp_code: '81344', time: '18:00'},
-          {emp_code: '12852', time: '18:10'},
-          {emp_code: '80006', time: '17:10'},
-          {emp_code: '13108', time: '18:04'},
-          {emp_code: '81468', time: '18:06'},
-          {emp_code: '12720', time: '18:12'},
-          {emp_code: '80267', time: '18:17'},
-          {emp_code: '50410', time: '14:21'},
-          {emp_code: '81505', time: '14:10'},
-          {emp_code: '80052', time: '18:09'},
-          {emp_code: '81506', time: '14:10'},
-          {emp_code: '80821', time: '14:22'},
-          {emp_code: '12129', time: '18:11'},
-          {emp_code: '80133', time: '18:08'},
-          {emp_code: '81248', time: '18:11'},
-          {emp_code: '90026', time: '17:21'},
-          {emp_code: '81220', time: '18:00'},
-          {emp_code: '81507', time: '14:11'},
-          {emp_code: '81469', time: '14:12'},
-          {emp_code: '12387', time: '18:17'},
-          {emp_code: '81132', time: '18:11'},
-          {emp_code: '80788', time: '18:13'},
-          {emp_code: '81508', time: '14:12'},
-          {emp_code: '90045', time: '18:11'},
-          {emp_code: '13111', time: '18:09'},
-          {emp_code: '81294', time: '14:11'},
-          {emp_code: '80820', time: '14:22'},
-          {emp_code: '12949', time: '18:14'},
-          {emp_code: '13153', time: '18:11'},
-          {emp_code: '11342', time: '14:11'},
-          {emp_code: '80899', time: '18:10'},
-          {emp_code: '80773', time: '18:13'},
-          {emp_code: '90064', time: '14:10'},
-          {emp_code: '81359', time: '14:15'},
-          {emp_code: '81282', time: '18:10'},
-          {emp_code: '81159', time: '18:11'},
-          {emp_code: '80092', time: '18:13'},
-          {emp_code: '80900', time: '14:12'},
-          {emp_code: '81361', time: '14:12'},
-          {emp_code: '80854', time: '14:11'},
-          {emp_code: '12727', time: '14:28'},
-          {emp_code: '12923', time: '18:07'},
-          {emp_code: '81360', time: '14:12'},
-          {emp_code: '81235', time: '18:10'},
-          {emp_code: '12073', time: '18:17'},
-          {emp_code: '81130', time: '14:19'},
-          {emp_code: '50454', time: '14:11'},
-          {emp_code: '81528', time: '14:11'},
-          {emp_code: '80884', time: '14:16'},
-          {emp_code: '50548', time: '18:21'},
-          {emp_code: '13134', time: '19:10'},
-          {emp_code: '81353', time: '14:14'},
-          {emp_code: '80102', time: '18:14'},
-          {emp_code: '81511', time: '18:11'},
-          {emp_code: '80106', time: '17:21'},
-          {emp_code: '13116', time: '18:12'},
-          {emp_code: '80800', time: '18:11'},
-          {emp_code: '50755', time: '17:11'},
-          {emp_code: '80953', time: '14:17'},
-          {emp_code: '81310', time: '18:10'},
-          {emp_code: '50409', time: '14:11'},
-          {emp_code: '81311', time: '14:17'},
-          {emp_code: '50804', time: '14:10'},
-          {emp_code: '81527', time: '14:11'},
-          {emp_code: '50560', time: '14:17'},
-          {emp_code: '80732', time: '14:10'},
-          {emp_code: '80728', time: '14:10'},
-          {emp_code: '81133', time: '18:04'},
-          {emp_code: '11671', time: '18:13'},
-          {emp_code: '81542', time: '21:52'},
-          {emp_code: '13130', time: '17:17'},
-          {emp_code: '90059', time: '18:11'},
-          {emp_code: '50799', time: '14:22'},
-          {emp_code: '10955', time: '18:25'},
-          {emp_code: '11210', time: '18:14'},
-          {emp_code: '50512', time: '14:11'},
-          {emp_code: '90040', time: '18:10'},
-          {emp_code: '81322', time: '18:05'},
-          {emp_code: '81320', time: '14:19'},
-          {emp_code: '81457', time: '14:11'},
-          {emp_code: '81487', time: '18:14'},
-          {emp_code: '12719', time: '18:08'},
-          {emp_code: '81429', time: '18:12'},
-          {emp_code: '50404', time: '14:11'},
-          {emp_code: '81458', time: '18:14'},
-          {emp_code: '81456', time: '18:14'},
-          {emp_code: '81514', time: '18:12'},
-          {emp_code: '12729', time: '14:23'},
-          {emp_code: '81496', time: '14:11'},
-          {emp_code: '11887', time: '18:13'},
-          {emp_code: '50772', time: '17:22'},
-          {emp_code: '81026', time: '14:10'},
-          {emp_code: '12318', time: '14:14'},
-          {emp_code: '50166', time: '14:20'},
-          {emp_code: '12708', time: '18:18'},
-          {emp_code: '50768', time: '17:23'},
-          {emp_code: '81536', time: '18:07'},
-          {emp_code: '81535', time: '14:11'},
-          {emp_code: '12430', time: '18:12'},
-          {emp_code: '81321', time: '18:05'},
-          {emp_code: '81148', time: '18:13'},
-          {emp_code: '81035', time: '18:12'},
-          {emp_code: '81222', time: '18:13'},
-          {emp_code: '50663', time: '18:11'},
-          {emp_code: '81223', time: '18:13'},
-          {emp_code: '81158', time: '18:13'},
-          {emp_code: '80330', time: '18:10'},
-          {emp_code: '10833', time: '19:31'},
-          {emp_code: '80050', time: '18:02'},
-          {emp_code: '11418', time: '18:11'},
-          {emp_code: '50382', time: '14:35'},
-          {emp_code: '13154', time: '18:12'},
-          {emp_code: '50516', time: '18:13'},
-          {emp_code: '80939', time: '18:12'},
-          {emp_code: '81246', time: '18:11'},
-          {emp_code: '81543', time: '21:52'},
-          {emp_code: '81063', time: '18:11'},
-          {emp_code: '81541', time: '21:53'},
-          {emp_code: '81242', time: '18:11'},
-          {emp_code: '10947', time: '18:20'},
-          {emp_code: '81495', time: '14:11'},
-          {emp_code: '50660', time: '14:27'},
-          {emp_code: '12859', time: '18:13'},
-          {emp_code: '81544', time: '21:52'},
-          {emp_code: '80153', time: '18:16'},
-          {emp_code: '50133', time: '14:20'},
-          {emp_code: '80525', time: '19:16'},
-          {emp_code: '11048', time: '18:57'},
-          {emp_code: '50519', time: '16:30'},
-          {emp_code: '50658', time: '18:13'},
-          {emp_code: '80001', time: '14:12'},
-          {emp_code: '80093', time: '18:13'},
-          {emp_code: '13178', time: '21:54'},
-          {emp_code: '11447', time: '17:43'},
-          {emp_code: '80481', time: '14:21'},
-          {emp_code: '80488', time: '18:08'},
-          {emp_code: '81291', time: '14:23'},
-          {emp_code: '80082', time: '17:28'},
-          {emp_code: '50203', time: '14:01'},
 
-          {emp_code: '80053', time: '17:18'},
-          {emp_code: '81210', time: '21:10'},
-          {emp_code: '12843', time: '17:17'},
-          {emp_code: '50603', time: '19:11'},
-          {emp_code: '81196', time: '21:09'},
-          {emp_code: '13045', time: '21:08'},
-          {emp_code: '50628', time: '18:11'},
-          {emp_code: '13113', time: '21:09'},
-          {emp_code: '81499', time: '21:11'},
-          {emp_code: '50633', time: '21:04'},
-          {emp_code: '81498', time: '21:06'},
-          {emp_code: '80743', time: '21:10'},
-          {emp_code: '80742', time: '21:10'},
-          {emp_code: '80741', time: '21:10'},
-          {emp_code: '13122', time: '17:18'},
-          {emp_code: '80097', time: '21:05'},
-          {emp_code: '81211', time: '17:30'},
-          {emp_code: '81234', time: '17:30'},
-          {emp_code: '80671', time: '21:11'},
-          {emp_code: '80931', time: '21:17'},
-          {emp_code: '81209', time: '17:30'},
-          {emp_code: '81212', time: '21:06'},
-          {emp_code: '81213', time: '21:05'},
-          {emp_code: '81464', time: '17:32'},
-          {emp_code: '81312', time: '19:08'},
-          {emp_code: '81478', time: '21:16'},
-          {emp_code: '80669', time: '19:18'},
-          {emp_code: '81350', time: '17:25'},
-          {emp_code: '50518', time: '17:39'},
-          {emp_code: '11453', time: '17:24'},
-          {emp_code: '81434', time: '21:10'},
-          {emp_code: '81347', time: '21:10'},
-          {emp_code: '81183', time: '19:15'},
-          {emp_code: '81236', time: '21:11'},
-          {emp_code: '81033', time: '21:06'},
-          {emp_code: '13123', time: '17:18'},
-          {emp_code: '81032', time: '21:06'},
-          {emp_code: '13121', time: '17:20'},
-          {emp_code: '13120', time: '17:20'},
-          {emp_code: '50099', time: '17:29'},
-          {emp_code: '81034', time: '21:06'},
-          {emp_code: '50515', time: '17:15'},
-          {emp_code: '81198', time: '21:08'},
-          {emp_code: '81195', time: '21:08'},
-          {emp_code: '12614', time: '19:11'},
-          {emp_code: '80484', time: '16:31'},
-          {emp_code: '50106', time: '17:16'},
-          {emp_code: '12575', time: '17:16'},
-          {emp_code: '50397', time: '19:57'},
-          {emp_code: '11987', time: '19:19'},
-          {emp_code: '80891', time: '21:06'},
-          {emp_code: '81204', time: '21:10'},
-          {emp_code: '80890', time: '21:06'},
-          {emp_code: '12443', time: '21:09'},
-          {emp_code: '12561', time: '21:18'},
-          {emp_code: '81231', time: '17:17'},
-          {emp_code: '81147', time: '19:15'},
-          {emp_code: '12920', time: '17:17'},
-          {emp_code: '81205', time: '17:25'},
-          {emp_code: '80672', time: '21:15'},
-          {emp_code: '81199', time: '17:25'},
-          {emp_code: '50482', time: '20:19'},
-          {emp_code: '80680', time: '21:14'},
-          {emp_code: '81252', time: '19:08'},
-          {emp_code: '13105', time: '17:34'},
-          {emp_code: '50109', time: '17:15'},
-          {emp_code: '12106', time: '17:19'},
-          {emp_code: '50304', time: '14:59'},
-          {emp_code: '50091', time: '17:15'},
-          {emp_code: '50111', time: '17:12'},
-          {emp_code: '11044', time: '19:15'},
-          {emp_code: '50147', time: '17:31'},
-          {emp_code: '80662', time: '21:08'},
-          {emp_code: '80819', time: '19:18'},
-          {emp_code: '12317', time: '21:05'},
-          {emp_code: '13118', time: '21:09'},
-          {emp_code: '80673', time: '21:05'},
-          {emp_code: '81175', time: '21:16'},
-          {emp_code: '50420', time: '17:24'},
-          {emp_code: '50352', time: '17:19'},
-          {emp_code: '50547', time: '21:02'},
-          {emp_code: '81480', time: '21:11'},
-          {emp_code: '50334', time: '13:59'},
-          {emp_code: '50118', time: '17:25'},
-          {emp_code: '11271', time: '17:23'},
-          {emp_code: '50453', time: '17:28'},
-          {emp_code: '11440', time: '17:31'},
-          {emp_code: '12995', time: '20:07'},
-          {emp_code: '50381', time: '17:15'},
-          {emp_code: '81343', time: '21:11'},
-          {emp_code: '81295', time: '21:11'},
-          {emp_code: '80190', time: '17:18'},
-          {emp_code: '80688', time: '21:08'},
-          {emp_code: '50456', time: '17:13'},
-          {emp_code: '50079', time: '17:46'},
-          {emp_code: '50113', time: '15:17'},
-          {emp_code: '50185', time: '17:44'},
-          {emp_code: '50763', time: '21:06'},
-          {emp_code: '50309', time: '17:40'},
-          {emp_code: '90060', time: '17:14'},
-          {emp_code: '50168', time: '17:16'},
-          {emp_code: '50092', time: '17:15'},
-          {emp_code: '50117', time: '17:15'},
-          {emp_code: '50805', time: '17:16'},
-          {emp_code: '50097', time: '17:14'},
-          {emp_code: '12305', time: '19:15'},
-          {emp_code: '12175', time: '19:15'},
-          {emp_code: '50167', time: '17:17'},
-          {emp_code: '12067', time: '17:20'},
-          {emp_code: '13145', time: '19:09'},
-          {emp_code: '50123', time: '17:13'},
-          {emp_code: '50100', time: '17:15'},
-          {emp_code: '50169', time: '17:17'},
-          {emp_code: '12903', time: '21:08'},
-          {emp_code: '12148', time: '21:09'},
-          {emp_code: '12429', time: '19:12'},
-          {emp_code: '12889', time: '19:10'},
-          {emp_code: '81111', time: '19:17'},
-          {emp_code: '13018', time: '19:10'},
-          {emp_code: '50554', time: '17:15'},
-          {emp_code: '12893', time: '19:11'},
-          {emp_code: '50582', time: '17:38'},
-          {emp_code: '13132', time: '17:21'},
-          {emp_code: '50640', time: '17:18'},
-          {emp_code: '80770', time: '21:11'},
-          {emp_code: '12723', time: '17:13'},
-          {emp_code: '12155', time: '19:13'},
-          {emp_code: '81334', time: '17:25'},
-          {emp_code: '12234', time: '17:31'},
-          {emp_code: '12158', time: '19:10'},
-          {emp_code: '50689', time: '17:20'},
-          {emp_code: '12351', time: '22:15'},
-          {emp_code: '13117', time: '17:21'},
-          {emp_code: '50412', time: '20:10'},
-          {emp_code: '12996', time: '17:20'},
-          {emp_code: '50771', time: '17:20'},
-          {emp_code: '50433', time: '17:22'},
-          {emp_code: '50114', time: '17:16'},
-          {emp_code: '80661', time: '21:08'},
-          {emp_code: '80747', time: '21:14'},
-          {emp_code: '12358', time: '17:19'},
-          {emp_code: '50829', time: '17:19'},
-          {emp_code: '13141', time: '19:20'},
-          {emp_code: '12546', time: '19:20'},
-          {emp_code: '50101', time: '17:13'},
-          {emp_code: '80768', time: '21:07'},
-          {emp_code: '50765', time: '19:13'},
-          {emp_code: '12037', time: '21:08'},
-          {emp_code: '12431', time: '19:13'},
-          {emp_code: '12006', time: '17:25'},
-          {emp_code: '12183', time: '18:14'},
-          {emp_code: '80765', time: '21:15'},
-          {emp_code: '50550', time: '17:13'},
-          {emp_code: '12948', time: '17:17'},
-          {emp_code: '81432', time: '19:17'},
-          {emp_code: '50059', time: '17:44'},
-          {emp_code: '81431', time: '21:06'},
-          {emp_code: '80797', time: '17:15'},
-          {emp_code: '50673', time: '17:26'},
-          {emp_code: '50553', time: '17:17'},
-          {emp_code: '50470', time: '20:09'},
-          {emp_code: '50440', time: '17:24'},
+        var final = []
+        arr.forEach(item => {
+          var tm = item.time
+          if (tm.length == 4) {
+            tm = '0' + tm
+          }
           
-          {emp_code: '50483', time: '17:26'},
-          {emp_code: '13094', time: '17:10'},
-          {emp_code: '50354', time: '17:14'},
-          {emp_code: '50815', time: '20:07'},
-          {emp_code: '50538', time: '17:31'},
-          {emp_code: '50335', time: '17:20'},
-          {emp_code: '80885', time: '17:32'},
-          {emp_code: '50108', time: '17:16'},
-          {emp_code: '50437', time: '17:17'},
-          {emp_code: '13127', time: '17:16'},
-          {emp_code: '90034', time: '22:20'},
-          {emp_code: '11072', time: '21:22'},
-          {emp_code: '13151', time: '17:16'},
-          {emp_code: '81433', time: '19:18'},
-          {emp_code: '50641', time: '17:18'},
-          {emp_code: '50620', time: '20:06'},
-          {emp_code: '50383', time: '17:17'},
-          {emp_code: '50183', time: '17:11'},
-          {emp_code: '50379', time: '17:16'},
-          {emp_code: '50622', time: '22:16'},
-          {emp_code: '50395', time: '17:16'},
-          {emp_code: '50896', time: '17:17'},
-          {emp_code: '50527', time: '12:37'},
-          {emp_code: '11618', time: '17:30'},
-          {emp_code: '81206', time: '17:29'},
-          {emp_code: '81200', time: '17:29'},
-          {emp_code: '50347', time: '17:12'},
-          {emp_code: '50093', time: '17:12'},
-          {emp_code: '50384', time: '18:40'},
-          {emp_code: '50623', time: '17:16'},
-          {emp_code: '50605', time: '17:14'},
-          {emp_code: '80009', time: '17:15'},
-          {emp_code: '80074', time: '17:19'},
-          {emp_code: '50451', time: '17:13'},
-          {emp_code: '50485', time: '18:20'},
-          {emp_code: '50468', time: '17:14'},
-          {emp_code: '50486', time: '17:16'},
-          {emp_code: '50429', time: '17:15'},
-          {emp_code: '12026', time: '17:45'},
-          {emp_code: '50327', time: '17:39'},
-          {emp_code: '11014', time: '17:25'},
-          {emp_code: '50513', time: '21:05'},
-          {emp_code: '50795', time: '18:23'},
-          {emp_code: '50469', time: '17:15'},
-          {emp_code: '12728', time: '19:06'},
-          {emp_code: '90032', time: '17:16'},
-          {emp_code: '90020', time: '21:04'},
-          {emp_code: '50493', time: '18:15'},
-          {emp_code: '50071', time: '17:16'},
-          {emp_code: '50666', time: '18:15'},
-          {emp_code: '50036', time: '17:11'},
-          {emp_code: '50077', time: '18:11'},
-          {emp_code: '50320', time: '19:44'},
-          {emp_code: '50170', time: '17:15'},
-          {emp_code: '12010', time: '19:13'},
-          {emp_code: '11889', time: '20:07'},
-          {emp_code: '50648', time: '17:15'},
-          {emp_code: '50130', time: '17:16'},
-          {emp_code: '80041', time: '17:19'},
-          {emp_code: '50094', time: '17:19'},
-          {emp_code: '11334', time: '21:36'},
-          {emp_code: '50632', time: '18:36'},
-          {emp_code: '50121', time: '17:16'},
-          {emp_code: '50180', time: '18:10'},
-          {emp_code: '50323', time: '17:15'},
-          {emp_code: '50501', time: '18:19'},
-          {emp_code: '50350', time: '17:15'},
-          {emp_code: '50686', time: '19:02'},
-          {emp_code: '50083', time: '17:31'},
-          {emp_code: '50348', time: '17:15'},
-          {emp_code: '11518', time: '21:24'},
-          {emp_code: '50444', time: '17:29'},
-          {emp_code: '50110', time: '17:18'},
-          {emp_code: '50128', time: '17:12'},
-          {emp_code: '50610', time: '18:10'},
-          {emp_code: '12825', time: '17:51'},
-          {emp_code: '11157', time: '22:14'},
-          {emp_code: '12579', time: '20:09'},
-          {emp_code: '50182', time: '17:19'},
-          {emp_code: '50333', time: '17:14'},
-          {emp_code: '50041', time: '20:06'},
-          {emp_code: '50368', time: '17:31'},
-          {emp_code: '50500', time: '19:52'},
-          {emp_code: '80921', time: '17:10'},
-          {emp_code: '50536', time: '17:54'},
-          {emp_code: '80476', time: '18:16'},
-          {emp_code: '50475', time: '17:18'},
-          {emp_code: '50662', time: '17:11'},
-          {emp_code: '50086', time: '17:31'},
-          {emp_code: '50049', time: '17:29'},
-          {emp_code: '50390', time: '18:08'},
-          {emp_code: '50186', time: '17:19'},
-          {emp_code: '50385', time: '17:16'},
-          {emp_code: '50126', time: '17:11'},
-          {emp_code: '50058', time: '17:23'},
-          {emp_code: '50602', time: '18:10'},
-          {emp_code: '50436', time: '17:15'},
-          {emp_code: '50430', time: '18:08'},
-          {emp_code: '50421', time: '18:14'},
-          {emp_code: '50597', time: '17:19'},
-          {emp_code: '80108', time: '17:18'},
-          {emp_code: '11452', time: '21:03'},
-          {emp_code: '50629', time: '17:36'},
-          {emp_code: '50405', time: '18:33'},
-          {emp_code: '50401', time: '20:48'},
-          {emp_code: '50634', time: '17:54'},
-          {emp_code: '50599', time: '21:04'},
-          {emp_code: '81007', time: '17:17'},
-          {emp_code: '50595', time: '22:16'},
-          {emp_code: '50391', time: '20:11'},
-          {emp_code: '50089', time: '17:14'},
-          {emp_code: '50137', time: '19:49'},
-          {emp_code: '50671', time: '17:10'},
-          {emp_code: '50362', time: '15:07'},
-          {emp_code: '00016', time: '17:00'},
-          {emp_code: '50047', time: '17:00'},
-          {emp_code: '50129', time: '17:00'},
-          {emp_code: '50139', time: '17:00'},
-          {emp_code: '50201', time: '17:00'},
-          {emp_code: '50300', time: '17:00'},
-          {emp_code: '50331', time: '17:00'},
-          {emp_code: '50539', time: '17:00'},
-          {emp_code: '50757', time: '17:00'},
-          {emp_code: '50756', time: '19:26'},
-          {emp_code: '50386', time: '17:55'},
-          {emp_code: '50672', time: '20:32'},
-          {emp_code: '50318', time: '18:08'},
-          
-          {emp_code: '50400', time: '22:09'},
-          {emp_code: '11198', time: '2:10'},
-          {emp_code: '11377', time: '22:15'},
-          {emp_code: '81013', time: '22:17'},
-          {emp_code: '11595', time: '2:10'},
-          {emp_code: '80191', time: '22:10'},
-          {emp_code: '50656', time: '22:15'},
-          {emp_code: '81005', time: '22:17'},
-          {emp_code: '50657', time: '22:10'},
-          {emp_code: '80051', time: '22:13'},
-          {emp_code: '50766', time: '22:15'},
-          {emp_code: '81038', time: '22:11'},
-          {emp_code: '50751', time: '22:20'},
-          {emp_code: '50455', time: '22:22'},
-          {emp_code: '80045', time: '22:05'},
-          {emp_code: '80816', time: '22:15'},
-          {emp_code: '50682', time: '22:08'},
-          {emp_code: '81413', time: '22:12'},
-          {emp_code: '12712', time: '2:07'},
-          {emp_code: '50596', time: '22:11'},
-          {emp_code: '11551', time: '22:29'},
-          {emp_code: '11118', time: '6:39'},
-          {emp_code: '80930', time: '2:10'},
-          {emp_code: '12722', time: '22:06'},
-          {emp_code: '81020', time: '2:15'},
-          {emp_code: '11054', time: '22:14'},
-          {emp_code: '81078', time: '22:04'},
-          {emp_code: '81022', time: '22:17'},
-          {emp_code: '81285', time: '22:14'},
-          {emp_code: '80667', time: '22:16'},
-          {emp_code: '80007', time: '22:10'},
-          {emp_code: '81036', time: '22:17'},
-          {emp_code: '50652', time: '22:13'},
-          {emp_code: '81376', time: '22:15'},
-          {emp_code: '50466', time: '22:29'},
-          {emp_code: '81375', time: '22:15'},
-          {emp_code: '81374', time: '22:14'},
-          {emp_code: '13099', time: '22:10'},
-          {emp_code: '80704', time: '22:19'},
-          {emp_code: '13097', time: '22:12'},
-          {emp_code: '80845', time: '22:11'},
-          {emp_code: '80841', time: '22:11'},
-          {emp_code: '13102', time: '22:15'},
-          {emp_code: '80842', time: '22:12'},
-          {emp_code: '13041', time: '22:14'},
-          {emp_code: '80067', time: '22:04'},
-          {emp_code: '50669', time: '23:14'},
-          {emp_code: '80686', time: '22:08'},
-          {emp_code: '81268', time: '22:13'},
-          {emp_code: '81517', time: '22:09'},
-          {emp_code: '13146', time: '22:15'},
-          {emp_code: '80668', time: '22:13'},
-          {emp_code: '80875', time: '22:13'},
-          {emp_code: '90077', time: '22:13'},
-          {emp_code: '81308', time: '22:13'},
-          {emp_code: '12587', time: '22:10'},
-          {emp_code: '80004', time: '22:10'},
-          {emp_code: '13164', time: '22:12'},
-          {emp_code: '80008', time: '22:10'},
-          {emp_code: '13115', time: '22:20'},
-          {emp_code: '80733', time: '22:08'},
-          {emp_code: '90071', time: '22:11'},
-          {emp_code: '81298', time: '22:11'},
-          {emp_code: '81286', time: '22:11'},
-          {emp_code: '81530', time: '22:08'},
-          {emp_code: '50509', time: '2:06'},
-          {emp_code: '80076', time: '22:11'},
-          {emp_code: '50471', time: '22:15'},
-          {emp_code: '13096', time: '22:17'},
-          {emp_code: '81339', time: '22:12'},
-          {emp_code: '13081', time: '22:21'},
-          {emp_code: '81251', time: '22:14'},
-          {emp_code: '81103', time: '2:08'},
-          {emp_code: '80684', time: '22:15'},
-          {emp_code: '81221', time: '22:10'},
-          {emp_code: '80612', time: '22:15'},
-          {emp_code: '81233', time: '22:16'},
-          {emp_code: '81497', time: '22:11'},
-          {emp_code: '50502', time: '22:08'},
-          {emp_code: '81500', time: '22:11'},
-          {emp_code: '50399', time: '22:11'},
-          {emp_code: '50803', time: '2:15'},
-          {emp_code: '81501', time: '22:16'},
-          {emp_code: '80705', time: '22:18'},
-          {emp_code: '80703', time: '22:18'},
-          {emp_code: '81328', time: '5:55'},
-          {emp_code: '81512', time: '22:09'},
-          {emp_code: '81327', time: '5:56'},
-          {emp_code: '50608', time: '0:03'},
-          {emp_code: '81335', time: '22:10'},
-          {emp_code: '81513', time: '22:08'},
-          {emp_code: '81502', time: '22:11'},
-          {emp_code: '81479', time: '22:11'},
-          {emp_code: '81503', time: '22:11'},
-          {emp_code: '80049', time: '22:10'},
-          {emp_code: '13131', time: '22:10'},
-          {emp_code: '81515', time: '22:09'},
-          {emp_code: '80065', time: '22:12'},
-          {emp_code: '90047', time: '22:15'},
-          {emp_code: '80101', time: '21:05'},
-          {emp_code: '81518', time: '22:13'},
-          {emp_code: '50801', time: '23:15'},
-          {emp_code: '12585', time: '22:10'},
-          {emp_code: '50127', time: '22:12'},
-          {emp_code: '50131', time: '22:11'},
-          {emp_code: '80729', time: '22:11'},
-          {emp_code: '80889', time: '22:11'},
-          {emp_code: '50413', time: '22:09'},
-          {emp_code: '50667', time: '22:41'},
-          {emp_code: '50403', time: '22:11'},
-          {emp_code: '81303', time: '22:11'},
-          {emp_code: '81126', time: '22:20'},
-          {emp_code: '12963', time: '22:09'},
-          {emp_code: '13157', time: '22:11'},
-          {emp_code: '90029', time: '2:13'},
-          {emp_code: '11165', time: '22:31'},
-          {emp_code: '80075', time: '22:08'},
-          {emp_code: '12108', time: '22:16'},
-          {emp_code: '81155', time: '22:15'},
-          {emp_code: '13136', time: '22:00'},
-          {emp_code: '81160', time: '22:14'},
-          {emp_code: '50668', time: '22:13'},
-          {emp_code: '11172', time: '22:19'},
-          {emp_code: '81156', time: '22:10'},        
-          {emp_code: '50406', time: '18:30'},
-          {emp_code: '11485', time: '22:12'},
-          {emp_code: '13029', time: '22:10'},
-          {emp_code: '50655', time: '22:13'},
-          {emp_code: '80489', time: '22:20'},
-          {emp_code: '50559', time: '23:32'},
-          {emp_code: '81146', time: '22:16'},
-          {emp_code: '13180', time: '22:14'},
-          {emp_code: '81002', time: '22:14'},
-          {emp_code: '13100', time: '22:13'},
-          {emp_code: '81363', time: '22:12'},
-          {emp_code: '13148', time: '22:11'},
-          {emp_code: '13155', time: '22:12'},
-          {emp_code: '81364', time: '22:08'},
-          {emp_code: '11661', time: '22:13'},
-          {emp_code: '50134', time: '22:05'},
-          {emp_code: '50600', time: '2:06'},
-          {emp_code: '81304', time: '22:10'},
-          {emp_code: '81309', time: '22:08'},
-          {emp_code: '80793', time: '22:14'},
-          {emp_code: '50514', time: '22:20'},
-          {emp_code: '12211', time: '22:12'},
-          {emp_code: '81534', time: '6:00'},
-          {emp_code: '81538', time: '6:01'},
-          {emp_code: '81537', time: '6:02'},
-          {emp_code: '13183', time: '5:57'},
-          {emp_code: '50809', time: '5:57'},
-          {emp_code: '11311', time: '5:59'},
-          {emp_code: '11576', time: '7:55'},
-          {emp_code: '80974', time: '6:16'},
-          {emp_code: '80060', time: '6:11'},
-          {emp_code: '11361', time: '6:07'},
-          {emp_code: '90009', time: '6:24'},
-          {emp_code: '90068', time: '6:11'},
-          {emp_code: '13073', time: '6:14'},
-          {emp_code: '80313', time: '6:13'},
-          {emp_code: '11717', time: '6:15'},
-          {emp_code: '11983', time: '6:17'},
-          {emp_code: '11438', time: '6:16'},
-          {emp_code: '80756', time: '6:11'},
-          {emp_code: '11332', time: '6:17'},
-          {emp_code: '80192', time: '6:07'},
-          {emp_code: '81075', time: '6:10'},
-          {emp_code: '12786', time: '6:15'},
-          {emp_code: '11753', time: '6:15'},
-          {emp_code: '80042', time: '6:10'},
-          {emp_code: '81060', time: '2:13'},
-          {emp_code: '81050', time: '2:13'},
-          {emp_code: '11645', time: '7:29'},
-          {emp_code: '11716', time: '6:10'},
-          {emp_code: '12711', time: '2:15'},
-          {emp_code: '80027', time: '6:08'},
-          {emp_code: '11747', time: '6:10'},
-          {emp_code: '81090', time: '6:11'},
-          {emp_code: '80012', time: '2:15'},
-          {emp_code: '81243', time: '6:10'},
-          {emp_code: '81446', time: '2:17'},
-          {emp_code: '81453', time: '6:11'},
-          {emp_code: '80753', time: '6:12'},
-          {emp_code: '90079', time: '2:17'},
-          {emp_code: '11649', time: '7:02'},
-          {emp_code: '90062', time: '6:13'},
-          {emp_code: '80098', time: '6:12'},
-          {emp_code: '50398', time: '2:12'},
-          {emp_code: '80838', time: '6:16'},
-          {emp_code: '81082', time: '6:12'},
-          {emp_code: '81072', time: '6:12'},
-          {emp_code: '80999', time: '6:11'},
-          {emp_code: '81024', time: '6:09'},
-          {emp_code: '81190', time: '2:09'},
-          {emp_code: '81463', time: '2:16'},
-          {emp_code: '81462', time: '2:15'},
-          {emp_code: '81170', time: '6:09'},
-          {emp_code: '00013', time: '2:00'},
-          {emp_code: '80181', time: '6:15'},
-          {emp_code: '11443', time: '6:22'},
-          {emp_code: '12714', time: '6:00'},
-          {emp_code: '12224', time: '5:56'},
-          {emp_code: '13114', time: '5:55'},
-          {emp_code: '81027', time: '6:01'},
-          {emp_code: '12716', time: '8:00'},
-          {emp_code: '50561', time: '6:24'},
-          {emp_code: '50506', time: '6:38'},
-          {emp_code: '81012', time: '6:10'},
-          {emp_code: '81037', time: '6:09'},
-          {emp_code: '80479', time: '6:34'},
-          {emp_code: '12717', time: '6:32'},
-          {emp_code: '12725', time: '6:33'},
-          {emp_code: '50647', time: '6:18'},
-          {emp_code: '80683', time: '6:08'},
-          {emp_code: '81293', time: '6:11'},
-          {emp_code: '81300', time: '6:10'},
-          {emp_code: '80882', time: '6:14'},
-          {emp_code: '80883', time: '6:14'},
-          {emp_code: '80881', time: '6:12'},
-          {emp_code: '80852', time: '6:11'},
-          {emp_code: '13109', time: '6:10'},
-          {emp_code: '80702', time: '6:16'},
-          {emp_code: '81186', time: '6:14'},
-          {emp_code: '13144', time: '6:17'},
-          {emp_code: '11333', time: '6:20'},
-          {emp_code: '81411', time: '6:12'},
-          {emp_code: '80096', time: '6:14'},
-          {emp_code: '90035', time: '6:12'},
-          {emp_code: '13173', time: '6:12'},
-          {emp_code: '81337', time: '6:12'},
-          {emp_code: '11255', time: '6:24'},
-          {emp_code: '80961', time: '6:11'},
-          {emp_code: '81522', time: '6:10'},
-          {emp_code: '81519', time: '6:10'},
-          {emp_code: '81149', time: '6:13'},
-          {emp_code: '81144', time: '6:14'},
-          {emp_code: '81154', time: '6:11'},
-          {emp_code: '12021', time: '6:15'},
-          {emp_code: '80061', time: '6:10'},
-          {emp_code: '50465', time: '7:11'},
-          {emp_code: '11648', time: '7:09'},
-          {emp_code: '81521', time: '6:10'},
-          {emp_code: '11215', time: '7:29'},
-          {emp_code: '50624', time: '6:09'},
-          {emp_code: '80988', time: '6:11'},
-          {emp_code: '12386', time: '6:10'},
-          {emp_code: '12718', time: '6:11'},
-          {emp_code: '81141', time: '6:12'},
-          {emp_code: '81077', time: '6:11'},
-          {emp_code: '50464', time: '7:08'},
-          {emp_code: '81008', time: '6:11'},
-          {emp_code: '81520', time: '6:10'},
-          {emp_code: '50415', time: '6:17'},
-          {emp_code: '80949', time: '6:14'},
-          {emp_code: '81545', time: '6:03'},
-          {emp_code: '81532', time: '6:06'},
-          {emp_code: '80858', time: '6:12'},
-          {emp_code: '80755', time: '6:11'},
-          {emp_code: '80629', time: '6:12'},
-          {emp_code: '81345', time: '6:12'},
-          {emp_code: '80738', time: '6:11'},
-          {emp_code: '81197', time: '6:06'},
-          {emp_code: '81546', time: '6:10'},
-          {emp_code: '50659', time: '6:09'},
-          {emp_code: '81421', time: '6:13'},
-          {emp_code: '81489', time: '6:12'},
-          {emp_code: '81490', time: '6:12'},
-          {emp_code: '81217', time: '6:12'},
-          {emp_code: '80048', time: '6:11'},
-          {emp_code: '81473', time: '6:14'},
-          {emp_code: '81465', time: '6:14'},
-          {emp_code: '80837', time: '6:16'},
-          {emp_code: '80693', time: '6:16'},
-          {emp_code: '80692', time: '6:17'},
-          {emp_code: '13162', time: '6:12'},
-          {emp_code: '81237', time: '6:11'},
-          {emp_code: '80802', time: '6:14'},
-          {emp_code: '13171', time: '6:11'},
-          {emp_code: '81228', time: '6:09'},
-          {emp_code: '80727', time: '6:12'},
-          {emp_code: '80670', time: '6:16'},
-          {emp_code: '80832', time: '6:16'},
-          {emp_code: '13106', time: '6:14'},
-          {emp_code: '81504', time: '6:15'},
-          {emp_code: '80677', time: '6:10'},
-          {emp_code: '81250', time: '6:11'},
-          {emp_code: '81481', time: '6:10'},
-          {emp_code: '81264', time: '6:16'},
-          {emp_code: '13137', time: '6:09'},
-          {emp_code: '80835', time: '6:16'},
-          {emp_code: '81523', time: '6:10'},
-          {emp_code: '81287', time: '6:12'},
-          {emp_code: '81305', time: '6:06'},
-          {emp_code: '80869', time: '6:10'},
-          {emp_code: '81193', time: '6:11'},
-          {emp_code: '80866', time: '6:10'},
-          {emp_code: '80095', time: '6:18'},
-          {emp_code: '80874', time: '6:10'},
-          {emp_code: '80826', time: '6:14'},
-          {emp_code: '13124', time: '6:15'},
-          {emp_code: '81352', time: '6:11'},
-          {emp_code: '13098', time: '6:12'},
-          {emp_code: '13119', time: '6:11'},
-          {emp_code: '81266', time: '6:16'},
-          {emp_code: '13103', time: '6:18'},
-          {emp_code: '80868', time: '6:10'},
-          {emp_code: '81547', time: '6:09'},
-          {emp_code: '81265', time: '6:16'},
-          {emp_code: '12403', time: '6:18'},
-          {emp_code: '81367', time: '6:15'},
-          {emp_code: '50402', time: '6:12'},
-          {emp_code: '50754', time: '7:08'},
-          {emp_code: '13107', time: '6:10'},
-          {emp_code: '12570', time: '6:10'},
-          {emp_code: '81201', time: '6:12'},
-          {emp_code: '81466', time: '6:12'},
-          {emp_code: '81417', time: '6:11'},
-          {emp_code: '81207', time: '6:11'},
-          {emp_code: '80107', time: '6:05'},
-          {emp_code: '12726', time: '6:12'},
-          {emp_code: '13187', time: '6:08'},
-          {emp_code: '80090', time: '6:13'},
-          {emp_code: '81225', time: '6:10'},
-          {emp_code: '81548', time: '6:10'},
-          {emp_code: '81483', time: '6:14'},
-          {emp_code: '50631', time: '6:26'},
-          {emp_code: '81253', time: '6:13'},
-          {emp_code: '81416', time: '6:11'},
-          {emp_code: '81203', time: '6:12'},
-          {emp_code: '80798', time: '6:12'},
-          {emp_code: '81224', time: '6:11'},
-          {emp_code: '80796', time: '6:12'},
-          {emp_code: '81531', time: '6:10'},
-          {emp_code: '80985', time: '6:11'},
-          {emp_code: '81549', time: '6:10'},
-          {emp_code: '81014', time: '6:11'},
-          {emp_code: '80413', time: '6:09'},
-          {emp_code: '81539', time: '6:10'},
-          {emp_code: '81239', time: '6:12'},
-          {emp_code: '50661', time: '6:12'},
-          {emp_code: '81418', time: '6:15'},
-          {emp_code: '81437', time: '6:12'},
-          {emp_code: '11135', time: '6:21'},
-          {emp_code: '50769', time: '6:20'},
-          {emp_code: '13159', time: '6:12'},
-          {emp_code: '80421', time: '6:10'},
-          {emp_code: '50549', time: '6:39'},
-          {emp_code: '50626', time: '6:37'},
-          {emp_code: '50517', time: '6:10'},
-          {emp_code: '50546', time: '7:09'},
-          {emp_code: '80091', time: '6:36'},
-          {emp_code: '90074', time: '6:15'},
-          {emp_code: '80043', time: '6:15'},
-          {emp_code: '81010', time: '6:10'},
-          {emp_code: '12799', time: '6:14'},
-          {emp_code: '50443', time: '6:09'},
-          {emp_code: '81259', time: '6:00'},
-          {emp_code: '81331', time: '6:11'},
-          {emp_code: '50800', time: '6:55'},
-          {emp_code: '50802', time: '6:55'},
-          {emp_code: '81529', time: '6:07'},
-          {emp_code: '81533', time: '6:07'},
-          {emp_code: '12707', time: '6:16'},
-          {emp_code: '12794', time: '20:37'},
-          {emp_code: '13177', time: '19:17'},
-          {emp_code: '50069', time: '8:04'},
-          {emp_code: '50366', time: '22:07'},
-          {emp_code: '50508', time: '2:02'},
-          {emp_code: '11434', time: '22:03'},
-          {emp_code: '11450', time: '19:21'},
-          {emp_code: '80063', time: '6:07'},
-          {emp_code: '80473', time: '7:16'},
-          {emp_code: '80934', time: '6:13'},
-          {emp_code: '80973', time: '22:14'},
-          {emp_code: '10930', time: '6:12'},
-          {emp_code: '81340', time: '5:59'}
-        ]
+          // final.push({emp_code: item.emp_code, time: moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + tm})
 
-        var currentTime = moment().format('HH:mm');
-        console.log('cron - ', currentTime)
+          final.push({emp_code: item.emp_code, time: tm})
+
+
+        })
+
+        tempout.forEach(item => {   
+          var tm = item.time
+          if (tm.length == 4) {
+            tm = '0' + tm
+          }
+          final.push({emp_code: item.emp_code, time: tm})
+          
+          // if (moment(moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + item).isSameOrBefore(moment(moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' 8:59').format('YYYY-MM-DD HH:MM'))) {
+          //   final.push({emp_code: item.emp_code, time: moment().format('YYYY-MM-DD') + ' ' + tm})
+          // } else
+          // {            
+          //   final.push({emp_code: item.emp_code, time: moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + tm})
+          // }
+        }
+        )
+        var totalsort = _.sortBy(final, function (o) {
+          // let dt = '2017-08-31 ' + o.time
+
+          // let dt = moment(new Date()).add(-1, 'days').format('YYYY-MM-DD')
+          
+          //   if (moment(moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + o.time).isSameOrBefore('2017-08-31 06:00')) {
+          //     dt = moment().format('YYYY-MM-DD')
+          //   }
+
+          //   dt = dt + ' ' + o.time
+
+          // return moment(o.time).format('YYYY-MM-DD HH:MM')
+          return o.time
+        })
+
+        // console.log('ts', totalsort.length)
+
+        var requests_made = 0
+
+        // console.log('total = ', total.count)
+
+        // console.log(totalsort)
+
+        totalsort.forEach(function (driver, index) {
+          if (driver.emp_code == '10947') {
+            console.log('10947', driver)
+          }
+
+          if (requests_made == 0) {
+            // createUser(data)
+            process(driver, index)
+          } else {
+            if (driver.time != '') {
+            setTimeout(function () {
+              // createUser(data)
+              process(driver, index)
+            }, 50 * index)
+          } else {
+            console.log('not inserted', driver)
+          }
+        }
+          requests_made++
+        })
+
+
+
+        // var currentTime = moment().format('HH:mm')
+        // console.log('cron - ', currentTime)
         // var currentTime = '17:00'
-        
-        var temp = total.filter(item => item.time == currentTime)
+
+        // var temp = total.filter(item => item.time == currentTime)
         // var temp = arr.filter(item => moment(moment().format("YYYY-MM-DD") + ' ' + item.time).isSameOrBefore(moment()))
         // var temp = tempout.filter(item => moment(moment().format("YYYY-MM-DD") + ' ' + item.time).isSameOrBefore("2017-08-30 15:30"))
-        // var temp = tempout;
+        // var temp = tempout
 
-      
-        temp.forEach(item => {
-          let empCode = item.emp_code;
-          let tm = item.time
-          let dt = moment().format('YYYY-MM-DD')
-          // let query = Knex.raw(`select * from data where emp_code = '${empCode}'  and dt = '${dt}' `)
-          let query = Knex.raw(`select * from data where emp_code = '${empCode}'  and closed = 0 `)
-          query.then(results => {
-            console.log('results are', results[0].length)
-            if (!results[0].length) {
-              
-              // shift calculation
-              Knex.raw(`select * from shifts where emp_code = '${empCode}'  and shift_from <= '${dt}' and shift_to >= '${dt}' `).then(results => {
-                var shift = 'NA';
-                if (results[0].length) {
-                  var shift = results[0][0]['shift']
-                }
 
-                // if (shift == 'A' || shift == 'G') {
-                  Knex.raw(`insert into data(emp_code, in_time, shift, dt) values('${empCode}', '${tm}', '${shift}', '${dt}')`).then(result => {
-                    console.log('insert ', result)
-                  })
-                // }
-                // } else {
-                //   console.error('shift not found', empCode)
-                // }
-              });
-              
-              
 
-            } else {
-              Knex.raw(`update data set out_time = '${tm}' where emp_code = '${empCode}' and dt = '${dt}';`).then(result => {
-                console.log('insert ', result)
-              })
-            }
-
-          })
-        })
 
         reply({
           currentTime,
-          temp
-        })
-
+        temp})
       }
+    }
+  },
+
+  {
+    path: '/clear',
+    method: 'GET',
+    handler: (request, reply) => {
+      Knex.raw("truncate table data").then(result => {
+        Knex.raw("truncate table email").then(result => {
+          Knex.raw("truncate table sms").then(result => {
+            reply({
+              success: true,
+              message: 'Data cleared'
+            })
+          })
+        })
+      })
     }
   },
 
   // auto close
   {
-    path: '/autoclose', 
-    method: 'GET', 
+    path: '/autoclose',
+    method: 'GET',
     handler: (request, reply) => {
-      var type = request.query.type;
-      var query = `update data set closed = 1 where (shift = 'A' or shift = 'G' or shift = 'B') and closed = 0`;
+      var type = request.query.type
+      var query = `update data set closed = 1 where (shift = 'A' or shift = 'G' or shift = 'B') and closed = 0`
       if (type == 2) {
-        query = `update data set closed = 1 where (shift = 'E' or shift = 'C') and closed = 0`;
+        query = `update data set closed = 1 where (shift = 'E' or shift = 'C') and closed = 0`
       }
       Knex.raw(query).then(result => {
         reply({
@@ -4275,143 +740,377 @@ const routes = [
 
   /* Mail */
   {
-    path: '/mail', 
-    method: 'GET', 
+    path: '/mail',
+    method: 'GET',
     handler: (request, reply) => {
-      console.log('in mail method')
-          // create reusable transporter object using the default SMTP transport
-          var transporter = nodemailer.createTransport({
-            host: 'mail.akrivia.in',
-            port: 465,
-            secure: true, // true for 465, false for other ports
-            auth: {
-                user: 'testmail@akrivia.in',
-                pass: 'Aeiou@123'
-            },
-            tls: { rejectUnauthorized: false }
-        });
+      // console.log('in mail method')
+      // create reusable transporter object using the default SMTP transport
+      var transporter = nodemailer.createTransport({
+        host: 'mail.akrivia.in',
+        port: 465,
+        secure: true, // true for 465, false for other ports
+        auth: {
+          user: 'testmail@akrivia.in',
+          pass: 'Aeiou@123'
+        },
+        tls: { rejectUnauthorized: false }
+      })
 
-        var message = '';
-        let query = Knex.raw(`select * from email  order by dt`)
-        
-              console.log('in mail')
-        
-              query.then((results) => {
-                if (!results || results[0].length === 0) {
-                  message = 'No data found'
-                } else {
-                  var data = results[0]
-                  var depts = _.uniq(_.pluck(data, "deptname"))
-                  console.log('departments are', depts)
-                  var currentDepartment = null;
+      var message = ''
+      let query = Knex.raw(`select * from email where dt = subdate(current_date, 1) and (expected > 0 or present > 0) order by deptname, tm `)
 
-                  depts.forEach(dept => {
-                    if (dept == currentDepartment) {
-                      message += `<tr>`
-                    } else {
-                      currentDepartment = dept
-                      message += `<tr><td rowspan="5">${dept}</td>`                      
-                    }
+      // console.log('in mail')
 
-                      var timings = ['06:15:00', '08:45:00', '14:15:00', '18:15:00', '22:15:00']
-                      timings.forEach(time => {
-                        message += `<td>${time}</td>`;
-  
-                        var a = _.filter(data, function (num) {return num.deptname == dept && num.tm == time && num.shift == 'A'})
-                        var b = _.filter(data, function (num) {return num.tm == time && num.shift == 'B'})
-                        var c = _.filter(data, function (num) {return num.tm == time && num.shift == 'C'})
-                        var e = _.filter(data, function (num) {return num.tm == time && num.shift == 'E'})
-                        var g = _.filter(data, function (num) {return num.tm == time && num.shift == 'G'})
-  
-                        if (a[0]) {
-                          message += `<td>${a[0].present}/${a[0].expected}</td>`
-                        } else {
-                          message += `<td></td>`
-                        }
-                        if (g[0]) {
-                          message += `<td>${g[0].present}/${g[0].expected}</td>`
-                        } else {
-                          message += `<td></td>`
-                        }
-                        if (b[0]) {
-                          message += `<td>${b[0].present}/${b[0].expected}</td>`
-                        } else {
-                          message += `<td></td>`
-                        }
-                        if (e[0]) {
-                          message += `<td>${e[0].present}/${e[0].expected}</td>`
-                        } else {
-                          message += `<td></td>`
-                        }
-                        if (c[0]) {
-                          message += `<td>${c[0].present}/${c[0].expected}</td>`
-                        } else {
-                          message += `<td></td>`
-                        }
-                        message += `</tr>`
+      query.then((results) => {
+        if (!results || results[0].length === 0) {
+          message = 'No data found'
+          reply({
+            success: false,
+            message: 'No data found'
+          })
+        } else {
+          var data = results[0]
+          console.log('data is', data)
 
-                      })
+          var types = ['Direct', 'Indirect']
+          types.forEach(type => {
+            var t = data.filter(function (item) { console.log(item); return item.emp_type === type })
+            var depts = _.uniq(_.pluck(t, 'deptname'))
+            // console.log('departments are', depts)
+            var currentDepartment = null
 
-                     
-            
-                    
-
-                  })
-
-
-// setup email data with unicode symbols
-var mailOptions = {
-  from: '"Vijay" <vijay.m@akrivia.in>', // sender address
-  to: 'vijay.m@akrivia.in', // list of receivers
-  subject: 'Mitsuba - End of Day Report', // Subject line
-  text: 'Mitsuba - End of Day Report', // plain text body
-  html: `
-  <style>
-  table, th, td {
-      border: 1px solid black;
-      border-collapse: collapse;
-  }
-  th, td {
-      padding: 5px;
-      text-align: left;    
-  }
-  </style>
-
-  <table style="width:100%">
-    <tr>
-      <th>Department</th>
-      <th>Shift Timind</th>
-      <th>A</th>
-      <th>GS</th>
-      <th>B</th>
-      <th>E</th>
-      <th>C</th>
-    </tr>
-    ${message}
+            message += `<h3>${type}</h3><table style="width:100%">
+                <tr>
+                <th>Date</th>
+                <th style="background-color:#676767;color:#fff;width:5px;" colspan="6"> Shift A<br> (report taken at 06:15)</th>
+                <th style="background-color:#676767;width:5px;color:#fff" colspan="6"> Shift G <br>(report taken at 08:45) </th>
+                <th style="background-color:#676767;width:5px;color:#fff" colspan="6"> Shift B <br>(report taken at 14:15) </th>
+                <th style="background-color:#676767;width:5px;color:#fff" colspan="6"> Shift E <br>(report taken at 18:15) </th>
+                <th style="background-color:#676767;width:5px;color:#fff" colspan="6">Shift C <br>(report taken at 22:15) </th>
     
-</table>`
-};
-
-transporter.sendMail(mailOptions, (error, info) => {
-  if (error) {
-      return console.log(error);
-  }
-  console.log('Message sent: %s', info.messageId);
-});
-
-                  reply({
-                    success: true,
-                    message
-                  })
-
-                }
-              }).catch((err) => {
-                reply('server-side error' + err)
-              })
-
-
+                </tr>
+        
+                <tr>
+                <th></th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;
+                color: #020202;
+                background: #34efaa;">A</th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width: 5px; color: #020202;
+                background: #34efaa;"> G </th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> B</th>
+                <th style="
+               
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> E </th>
+                <th style="
+                
+                 font-size: 15px;
+                 font-weight: 700;
+                 width:5px;color: #020202;
+                 background: #34efaa;"> C </th>
+                 <th style="
+                 
+                  font-size: 15px;
+                  font-weight: 700;
+                  width:5px;color: #020202;
+                  background: #09888e;">SC</th>
+                <!-- 2nd th -->
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;
+                color: #020202;
+                background: #34efaa;">A</th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width: 5px; color: #020202;
+                background: #34efaa;"> G </th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> B</th>
+                <th style="
+               
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> E </th>
+                <th style="
+               
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> C </th>
+                <th style="
+                
+                 font-size: 15px;
+                 font-weight: 700;
+                 width:5px;color: #020202;
+                 background: #09888e;">SC</th>
+    
+                <!-- 3nd th -->
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;
+                color: #020202;
+                background: #34efaa;">A</th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width: 5px; color: #020202;
+                background: #34efaa;"> G </th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> B</th>
+                <th style="
+               
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> E </th>
+                <th style="
+               
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> C </th>
+    
+                <th style="
+                
+                 font-size: 15px;
+                 font-weight: 700;
+                 width:5px;color: #020202;
+                 background: #09888e;">SC</th>
+                <!-- 4th th -->
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;
+                color: #020202;
+                background: #34efaa;">A</th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width: 5px; color: #020202;
+                background: #34efaa;"> G </th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> B</th>
+                <th style="
+               
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> E </th>
+                <th style="
+               
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> C </th>
+                <th style="
+                
+                 font-size: 15px;
+                 font-weight: 700;
+                 width:5px;color: #020202;
+                 background: #09888e;">SC</th>
+                <!-- 5th th -->
+                   <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;
+                color: #020202;
+                background: #34efaa;">A</th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width: 5px; color: #020202;
+                background: #34efaa;"> G </th>
+                <th style="
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> B</th>
+                <th style="
+               
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> E </th>
+                <th style="
+               
+                font-size: 15px;
+                font-weight: 700;
+                width:5px;color: #020202;
+                background: #34efaa;"> C </th>
+                <th style="
+                
+                 font-size: 15px;
+                 font-weight: 700;
+                 width:5px;color: #020202;
+                 background: #09888e;">SC</th>
+            </tr>`
+            
+            
   
+            depts.forEach(dept => {
+              if (dept == currentDepartment) {
+                message += `<tr>`
+              } else {
+                currentDepartment = dept
+                message += `<tr><td align="center" width="5px">${dept}</td>`
+              }
+  
+              let timings = ['06:15:00', '08:45:00', '14:15:00', '18:15:00', '22:15:00']
+              timings.forEach(time => {
+                // message += `<td>${time}</td>`
+  
+                // console.log('abc', dept, time)
+  
+                var a = _.filter(t, function (num) {return num.deptname == dept && num.tm == time.substr(0,8) && num.shift == 'A'})
+                var b = _.filter(t, function (num) {return num.deptname == dept && num.tm == time.substr(0,8) && num.shift == 'B'})
+                var c = _.filter(t, function (num) {return num.deptname == dept && num.tm == time.substr(0,8) && num.shift == 'C'})
+                var e = _.filter(t, function (num) {return num.deptname == dept && num.tm == time.substr(0,8) && num.shift == 'E'})
+                var g = _.filter(t, function (num) {return num.deptname == dept && num.tm == time.substr(0,8) && num.shift == 'G'})
+  
+                var total = 0;
+                var expected = 0;
+                
+  
+                if(time == '06:15:00') {
+                  if (a[0] && a[0].present) {message += `<td align="center" style="background: #e21b1b;color:#fff">${a[0].present}</td>`; total += parseInt(a[0].present); expected = a[0].expected} else {message += `<td align="center" style="background: #e21b1b;color:#fff"></td>`}
+                  if (g[0] && g[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${g[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  if (b[0] && b[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${b[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  if (e[0] && e[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${e[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  if (c[0] && c[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${c[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  message += `<td align="center" style="background: #09888e;color:#fff">${total}/${expected}</td>`
+                }
+  
+  
+                if(time == '08:45:00') {
+                  if (a[0] && a[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${a[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}                
+                  if (g[0] && g[0].present) {message += `<td align="center" style="background: #e21b1b;color:#fff">${g[0].present}</td>`; total += parseInt(g[0].present); expected = g[0].expected} else {message += `<td align="center" style="background: #e21b1b;color:#fff"></td>`}
+                  if (b[0] && b[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${b[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  if (e[0] && e[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${e[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  if (c[0] && c[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${c[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  message += `<td align="center" style="background: #09888e;color:#fff">${total}/${expected}</td>`
+                }    
+                
+                if(time == '14:15:00') {
+                  if (a[0] && a[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${a[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}                
+                  if (g[0] && g[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${g[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+  
+                  if (b[0] && b[0].present) {message += `<td align="center" style="background: #e21b1b;color:#fff">${b[0].present}</td>`; total += parseInt(b[0].present); expected = b[0].expected} else {message += `<td align="center" style="background: #e21b1b;color:#fff"></td>`}
+  
+                  if (e[0] && e[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${e[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  if (c[0] && c[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${c[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  message += `<td align="center" style="background: #09888e;color:#fff">${total}/${expected}</td>`
+                } 
+  
+  
+                if(time == '18:15:00') {
+                  if (a[0] && a[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${a[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}                
+                  if (g[0] && g[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${g[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+  
+                
+  
+                  if (b[0] && b[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${b[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+  
+                  if (e[0] && e[0].present) {message += `<td align="center" style="background: #e21b1b;color:#fff">${e[0].present}</td>`; total += parseInt(e[0].present); expected = e[0].expected} else {message += `<td align="center" style="background: #e21b1b;color:#fff"></td>`}
+  
+                  if (c[0] && c[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${c[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+                  message += `<td align="center" style="background: #09888e;color:#fff">${total}/${expected}</td>`
+                } 
+  
+                if(time == '22:15:00') {
+                  if (a[0] && a[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${a[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}                
+                  if (g[0] && g[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${g[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+              
+                  if (b[0] && b[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${b[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+  
+  
+                  if (e[0] && e[0].present) { message += `<td align="center" style="background: #ab6712;color:#fff">${e[0].present}</td>`; } else {message += `<td align="center" style="background: #ab6712;color:#fff"></td>`}
+  
+                  if (c[0] && c[0].present) {message += `<td align="center" style="background: #e21b1b;color:#fff">${c[0].present}</td>`; total += parseInt(c[0].present); expected = c[0].expected} else {message += `<td align="center" style="background: #e21b1b;color:#fff"></td>`}
+  
+                  message += `<td align="center" style="background: #09888e;color:#fff">${total}/${expected}</td>`
+                } 
+  
+              })
+              message += `</tr>`
+              
+            })
+            message += `</table>`
+          })
 
+
+         
+          // console.log('email message is', message)
+
+var html = `<!DOCTYPE html>
+  <html>
+
+  <head>
+    <style>
+        table,
+        th,
+        td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+    </style>
+  </head>
+
+  <body>
+   
+
+${message}
+</body></html>`
+
+
+          // setup email data with unicode symbols
+          var mailOptions = {
+            from: '"Vijay" <vijay.m@akrivia.in>', // sender address
+            to: 'vijay.m@akrivia.in', // list of receivers
+            subject: 'Mitsuba - End of Day Report', // Subject line
+            text: 'Mitsuba - End of Day Report', // plain text body
+            html: html
+
+          }
+
+          transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+              return console.log(error)
+            }
+            console.log('Message sent: %s', info.messageId)
+          })
+
+          reply({
+            success: true,
+          message})
+        }
+      }).catch((err) => {
+        reply('server-side error' + err)
+      })
     }
   }
 ]
@@ -4422,7 +1121,7 @@ function insertOrUpdate (knex, tableName, data) {
     Object.getOwnPropertyNames(firstData).map((field) => `${field}=VALUES(${field})`).join(',  '))
 }
 
-function sms(to, message) {
+function sms (to, message) {
   if (to && msg) {
     var request = require('request')
     const url = 'http://login.smsmoon.com/API/sms.php'
@@ -4452,6 +1151,89 @@ function sms(to, message) {
       success: false,
       error: 'Sending SMS failed'
     })
+  }
+}
+
+function process (item, index) {
+  // if (item.emp_code == '00013') {
+  //   console.log('00013', item)
+  // }
+  // if (item.emp_code == '10947') {
+  //   console.log('10947', item)
+  // }
+
+  var yesterday = moment(new Date()).add(-1, 'days').format('YYYY-MM-DD')
+console.log(item.time)
+  // console.log(index)
+
+
+  let empCode = item.emp_code
+  let tm = item.time
+  console.log(`parse ${empCode} ${tm}`)
+  let dt = moment(new Date()).add(-1, 'days').format('YYYY-MM-DD')
+
+  if (moment(moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + item.time).isSameOrBefore(dt + ' 05:00')) {
+    dt = moment().format('YYYY-MM-DD')
+  }
+
+  // let query = Knex.raw(`select * from data where emp_code = '${empCode}'  and dt = '${dt}' `)
+  let query = Knex.raw(`select * from data where emp_code = '${empCode}'  and closed = 0 `)
+  query.then(results => {
+    // console.log('results are', results[0].length)
+    if (!results[0].length) {
+
+      // shift calculation
+      Knex.raw(`select * from shifts where emp_code = '${empCode}' and shift_from <= '${dt}' and shift_to >= '${dt}' `).then(results => {
+        var shift = 'NA'
+        if (results[0].length) {
+          var shift = results[0][0]['shift']
+        }
+
+        // if (shift == 'A' || shift == 'G') {
+        Knex.raw(`insert into data(emp_code, in_time, shift, dt) values('${empCode}', '${tm}', '${shift}', '${dt}')`).then(result => {
+          // console.log('insert ', result)
+        })
+      // }
+      // } else {
+      //   console.error('shift not found', empCode)
+      // }
+      })
+    } else {
+      let query = `update data set out_time = '${tm}' where emp_code = '${empCode}' and closed = 0;`
+      let shift = results[0].shift
+
+      if (shift == 'E' || shift == 'C') {
+        dt = moment().add(-1, 'days').format('YYYY-MM-DD')
+        query = `update data set out_time = '${tm}' where emp_code = '${empCode}' and dt = '${dt}';`
+      }
+
+      Knex.raw(query).then(result => {
+        // console.log('shift is ', shift, ' update ', result)
+      })
+    }
+  })
+
+
+
+
+  if (item.time == `${yesterday} 06:15`) {
+    request.get('http://localhost:7879/status?tm=06:15:00&dept=1', null, function (error, response, body) {})
+  }
+
+  if (item.time == `${yesterday} 08:45`) {
+    request.get('http://localhost:7879/status?tm=08:45:00&dept=1', null, function (error, response, body) {})
+  }
+
+  if (item.time == `${yesterday} 14:15`) {
+    request.get('http://localhost:7879/status?tm=14:15:00&dept=1', null, function (error, response, body) {})
+  }
+
+  if (item.time == `${yesterday} 18:15`) {
+    request.get('http://localhost:7879/status?tm=18:15:00&dept=1', null, function (error, response, body) {})
+  }
+
+  if (item.time == `${yesterday} 22:15`) {
+    request.get('http://localhost:7879/status?tm=22:15:00&dept=1', null, function (error, response, body) {})
   }
 }
 

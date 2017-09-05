@@ -5,7 +5,7 @@ var corsHeaders = require('hapi-cors-headers')
 const server = new Hapi.Server()
 
 server.connection({
-  port: 7878
+  port: 7879
 })
 server.ext('onPreResponse', corsHeaders)
 
