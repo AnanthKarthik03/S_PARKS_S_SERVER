@@ -417,7 +417,7 @@ const routes = [
         var today = moment().format('YYYY-MM-DD')
         tm = today + ' ' + tm
         var tm6 = today + ' 06:00:00'
-        var tm14 = today + ' 14:00:00'
+        var tm14 = today + ' 14:0status0:00'
         var tm830 = today + ' 08:30:00'
         var tm1730 = today + ' 17:30:00'
         var tm22 = today + ' 22:00:00'
@@ -425,7 +425,8 @@ const routes = [
 
         // important: and time_to_sec(d.in_time) <= time_to_sec('${tm}')
 
-        var smsquery = (`SELECT s.shift, count(d.emp_code) as present, if(s.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift=s.shift), if(s.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift=s.shift), if(s.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=s.shift), if(s.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift=s.shift), if(s.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=s.shift), 0))))) as expected FROM shifts s left join data d on d.emp_code = s.emp_code and d.dt = CURRENT_DATE  where  out_time is null group by s.shift order by FIELD(s.shift,'A','G','B','E','C'), dept`)
+        var smsquery = (`SELECT shift, count(emp_code) as present, if(data.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), if(data.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), if(data.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), if(data.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), if(data.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), 0))))) as expected FROM data where out_time is null and shift <> 'NA' and dt = current_date group by shift order by FIELD(shift,'A','G','B','E','C')`)
+
 
         console.log('sms', smsquery)
 
@@ -543,7 +544,9 @@ const routes = [
       var tm22 = today + ' 22:00:00'
       var tm18 = today + ' 18:00:00'
 
-      var deptq = `insert into email(dt, tm, deptname, shift, emp_type, present, expected) (SELECT current_date as dt, '${origtime}' as tm, s.dept, s.shift, s.emp_type, count(d.emp_code) as present, if(s.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1),if(s.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1),if(s.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm1415}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1), if(s.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1),if(s.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type group by dept, shift, emp_type limit 1), 0))))) as expected FROM shifts s left join data d on d.emp_code = s.emp_code and d.dt = current_date  where out_time is null group by s.dept, s.shift, s.emp_type order by dept)`
+      var deptq = `insert into email(dt, tm, deptname, shift, emp_type, present, expected) (SELECT current_date as dt, '${origtime}' as tm, s.dept, s.shift, s.emp_type, count(d.emp_code) as present, if(s.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm1415}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1), if(s.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1), 0))))) as expected FROM shifts s left join data d on d.emp_code = s.emp_code and d.dt = current_date and out_time is null 
+      where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE 
+      group by s.dept, s.shift, s.emp_type order by shift)`
 
       console.log(deptq)
       Knex.raw(deptq).then((result) => {
@@ -1225,6 +1228,14 @@ const routes = [
         })
       })
     }
+  },
+
+  /* Migration */
+  {
+    path: '/export',
+    method: 'POST',
+    handler: (request, reply) => {
+    }
   }
 ]
 
@@ -1241,7 +1252,7 @@ function mail (reply, message, mispunch, absentees) {
   })
 
   // send message
-  var html = `<!DOCTYPE html><html><head><style>table,th,td {border: 1px solid black;border-collapse: collapse;}</style></head><body>${message}`
+  var html = `<!DOCTYPE html><html><head><style>table,th,td {border: 1px solid black;border-collapse: collapse;}</style></head><body><h3>Employee Attendance Report - ` + moment(new Date()).add(-1, 'days').format('dddd, Do MMMM YYYY') + `</h3>${message}`
 
   if (mispunch) {
     html += `<h3>Mispunches</h3>${mispunch}`
@@ -1258,8 +1269,8 @@ function mail (reply, message, mispunch, absentees) {
     to: 'kiran.ys@akrivia.in', // list of receivers
     cc: 'ramakrishna.cp@akrivia.in',
     bcc: 'vijay.m@akrivia.in',
-    subject: 'Mitsuba - End of Day Report', // Subject line
-    text: 'Mitsuba - End of Day Report', // plain text body
+    subject: 'MAPS - Employee Attendance Report for ' + moment(new Date()).add(-1, 'days').format('dddd, Do MMMM YYYY'), // Subject line
+    text: 'MAPS - Employee Attendance Report', // plain text body
     html: html
   }
 
@@ -1283,39 +1294,6 @@ function insertOrUpdate (knex, tableName, data) {
   return knex.raw(knex(tableName).insert(data).toQuery() + ' ON DUPLICATE KEY UPDATE ' +
     Object.getOwnPropertyNames(firstData).map(field => `${field}=VALUES(${field})`).join(',  '))
 }
-
-// function sms (to, message) {
-//   if (to && msg) {
-//     var request = require('request')
-//     const url = 'http://login.smsmoon.com/API/sms.php'
-//     const body = {
-//       'username': 'raghuedu',
-//       'password': '`abcd.1234`',
-//       'from': 'RAGHUT',
-//       'to': to,
-//       'msg': msg,
-//       'type': '1',
-//       'dnd_check': '0'
-//     }
-
-//     request.post(url, {
-//       form: body
-//     }, function (error, response, body) {
-//       if (!error && response.statusCode == 200) {
-//         console.log(body) // Print the google web page.
-//         reply({
-//           success: true,
-//           data: 'SMS sent successfully'
-//         })
-//       }
-//     })
-//   } else {
-//     reply({
-//       success: false,
-//       error: 'Sending SMS failed'
-//     })
-//   }
-// }
 
 function process (item, index) {
   // if (item.emp_code == '00013') {
