@@ -451,9 +451,9 @@ const routes = [
                 var request2 = require('request')
                 const url = 'http://login.smsmoon.com/API/sms.php'
                 const body = {
-                  'username': 'raghuedu',
-                  'password': 'abcd.1234',
-                  'from': 'RAGHUT',
+                  'username': 'Raghugroup',
+                  'password': 'Abcd@1234',
+                  'from': 'AKSOFT',
                   'to': to,
                   'msg': message,
                   'type': '1',
