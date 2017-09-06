@@ -182,11 +182,9 @@ const routes = [
       }
     },
     handler: (request, reply) => {
-      const { name, email, mobile, new_password, old_password } = request.payload
-      let username = request.auth.credentials.username
+      const { name, email, mobile, new_password: newPassword, old_password: oldPassword } = request.payload
 
-      let oldPassword = old_password
-      let newPassword = new_password
+      let username = request.auth.credentials.username
 
       Knex('users').select('password').where({username}).then(([user]) => {
         if (!user) {
@@ -1258,6 +1256,7 @@ function mail (reply, message, mispunch, absentees) {
   var mailOptions = {
     from: '"Akrivia" <support@akrivia.in>', // sender address
     to: 'kiran.ys@akrivia.in', // list of receivers
+    cc: 'ramakrishna.cp@akrivia.in',
     bcc: 'vijay.m@akrivia.in',
     subject: 'Mitsuba - End of Day Report', // Subject line
     text: 'Mitsuba - End of Day Report', // plain text body
