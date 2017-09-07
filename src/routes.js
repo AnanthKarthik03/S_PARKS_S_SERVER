@@ -24,7 +24,7 @@ const routes = [
           if (!user) {
             reply({
               error: true,
-              errMessage: 'the specified user was not found'
+              errMessage: 'The specified user was not found'
             })
             return
           }
@@ -41,12 +41,12 @@ const routes = [
               })
 
               reply({
-                success: 'true',
-                token: token,
-                name: user.name,
-                email: user.email,
-                mobile: user.mobile
-              })
+              success: 'true',
+              token: token,
+              name: user.name,
+              email: user.email,
+              mobile: user.mobile
+            })
             } else {
               reply({ success: false, error: 'incorrect password' })
             }
@@ -110,20 +110,20 @@ const routes = [
                     request3.post(url, {
                       form: body
                     }, function (error, response, body) {
-                      if (!error && parseInt(response.statusCode) === 200) {
+                    if (!error && parseInt(response.statusCode) === 200) {
                       // console.log(body) // Print the google web page.
 
-                        reply({
-                          success: true,
-                          message: 'Password update successful' + hash
-                        })
-                      } else {
-                        reply({
-                          success: false,
-                          message: 'Password update successful, but sending SMS failed. Contact Administrator'
-                        })
-                      }
-                    })
+                      reply({
+                        success: true,
+                        message: 'Password update successful' + hash
+                      })
+                    } else {
+                      reply({
+                        success: false,
+                        message: 'Password update successful, but sending SMS failed. Contact Administrator'
+                      })
+                    }
+                  })
                   }
                 } else {
                   reply({
@@ -417,18 +417,16 @@ const routes = [
         var today = moment().format('YYYY-MM-DD')
         tm = today + ' ' + tm
         var tm6 = today + ' 06:00:00'
-        var tm14 = today + ' 14:00:00'
         var tm830 = today + ' 08:30:00'
+        var tm14 = today + ' 14:00:00'
         var tm1730 = today + ' 17:30:00'
-        var tm22 = today + ' 22:00:00'
         var tm18 = today + ' 18:00:00'
+        var tm22 = today + ' 22:00:00'
+        var tm2 = today + ' 02:00:00'
 
-        // important: and time_to_sec(d.in_time) <= time_to_sec('${tm}')
+        // var smsquery = `SELECT shifts.shift, count(data.emp_code) as present, if(shifts.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift='E' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), 0))))) as expected FROM shifts left join data on data.emp_code = shifts.emp_code and data.dt = CURRENT_DATE and shifts.shift_from <= current_date and shifts.shift_to >= current_date and out_time is null and data.shift <> 'NA' group by shift order by FIELD(shifts.shift,'A','G','B','E','C')`
 
-        // var smsquery = (`SELECT shifts.shift, count(data.emp_code) as present, if(data.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), if(data.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), if(data.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), if(data.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), if(data.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=data.shift and shift_from <= current_date and shift_to >= current_date), 0))))) as expected FROM data where out_time is null and shift <> 'NA' and dt = current_date group by shift order by FIELD(shift,'A','G','B','E','C')`)
-
-        var smsquery = `SELECT shifts.shift, count(data.emp_code) as present,         
-        if(shifts.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift='E' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), 0))))) as expected FROM shifts left join data on data.emp_code = shifts.emp_code and data.dt = CURRENT_DATE and shifts.shift_from <= current_date and shifts.shift_to >= current_date and out_time is null and data.shift <> 'NA' group by shift order by FIELD(shifts.shift,'A','G','B','E','C')`
+        var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
 
         console.log('sms', smsquery)
 
@@ -438,7 +436,25 @@ const routes = [
         smsq.then((result) => {
           if (result[0].length) {
             result[0].forEach((item) => {
-              message += item.shift + ' - ' + item.present + '/' + item.expected + '     '
+              var expected = 0
+
+              if (item.shift === 'A' && moment(tm).isSameOrAfter(moment(tm6)) && moment(tm).isBefore(moment(tm14))) {
+                expected = item.expected
+              }
+              if (item.shift === 'G' && moment(tm).isSameOrAfter(moment(tm830)) && moment(tm).isBefore(moment(tm1730))) {
+                expected = item.expected
+              }
+              if (item.shift === 'B' && moment(tm).isSameOrAfter(moment(tm14)) && moment(tm).isBefore(moment(tm22))) {
+                expected = item.expected
+              }
+              if (item.shift === 'E' && (moment(tm).isSameOrAfter(moment(tm18)) || moment(tm).isBefore(moment(tm2)))) {
+                expected = item.expected
+              }
+              if (item.shift === 'C' && (moment(tm).isSameOrAfter(moment(tm22)) || moment(tm).isBefore(moment(tm6)))) {
+                expected = item.expected
+              }
+
+              message += item.shift + ' - ' + item.present + '/' + expected + '     '
             })
             if (message) {
               message = tm.substr(0, tm.length - 3) + ': ' + message.substr(0, message.length - 2)
@@ -446,7 +462,8 @@ const routes = [
                 // nik 9491273518
                 // 9703400284,
                 // 9441604400
-                to = '9885721144,8500373704'
+                // kir: 8500373704
+                to = '9885721144'
               }
               if (to && message) {
                 // console.log(`SMS sent: ${to}, ${message}`)
@@ -561,166 +578,22 @@ const routes = [
 
   // ////////////////////
   /* Admin */
-  // Insert data
-
-  // Temp Inserts
-  {
-    path: '/cron',
-    method: 'GET',
-    config: {
-      handler: (request, reply) => {
-        var today = moment(new Date()).format('YYYY-MM-DD') + ' '
-        var yesterday = moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' '
-
-        var arr = [
-          { emp_code: '10001', time: yesterday + '05:55' },
-          { emp_code: '10002', time: yesterday + '08:30' },
-          { emp_code: '10003', time: yesterday + '08:20' },
-          { emp_code: '10004', time: yesterday + '06:00' },
-          { emp_code: '10005', time: yesterday + '14:15' },
-          { emp_code: '10006', time: yesterday + '22:50' },
-          { emp_code: '10007', time: yesterday + '05:20' },
-          { emp_code: '10008', time: yesterday + '19:30' },
-          { emp_code: '10009', time: yesterday + '13:30' },
-          { emp_code: '10010', time: yesterday + '06:15' },
-          { emp_code: '10011', time: yesterday + '17:30' },
-          { emp_code: '10012', time: yesterday + '05:30' },
-          { emp_code: '10013', time: yesterday + '08:38' },
-          { emp_code: '10014', time: yesterday + '08:38' },
-          { emp_code: '10015', time: yesterday + '22:15' },
-          { emp_code: '10016', time: yesterday + '05:30' },
-          { emp_code: '10017', time: yesterday + '18:15' },
-          { emp_code: '90000', time: yesterday + '06:15' },
-          { emp_code: '90000', time: yesterday + '08:45' },
-          { emp_code: '90000', time: yesterday + '14:15' },
-          { emp_code: '90000', time: yesterday + '18:15' },
-          { emp_code: '90000', time: yesterday + '22:15' }
-        ]
-
-        var tempout = [
-          { emp_code: '10001', time: yesterday + '14:20' },
-          { emp_code: '10002', time: yesterday + '17:30' },
-          { emp_code: '10003', time: yesterday + '17:15' },
-          { emp_code: '10004', time: yesterday + '14:25' },
-          { emp_code: '10005', time: yesterday + '22:00' },
-          { emp_code: '10006', time: today + '05:30' },
-          { emp_code: '10007', time: yesterday + '15:00' },
-          { emp_code: '10008', time: today + '05:55' },
-          { emp_code: '10009', time: yesterday + '22:30' },
-          { emp_code: '10010', time: yesterday + '13:30' },
-          { emp_code: '10011', time: today + '03:00' },
-          { emp_code: '10012', time: yesterday + '15:00' },
-          { emp_code: '10013', time: yesterday + '17:30' },
-          { emp_code: '10014', time: yesterday + '17:45' },
-          { emp_code: '10015', time: today + '07:00' },
-          { emp_code: '10016', time: yesterday + '19:30' },
-          { emp_code: '10017', time: today + '06:30' }
-        ]
-
-        var final = []
-        arr.forEach((item) => {
-          var tm = item.time
-          if (tm.length === 4) {
-            tm = '0' + tm
-          }
-
-          // final.push({emp_code: item.emp_code, time: moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + tm})
-
-          final.push({ emp_code: item.emp_code, time: tm })
-        })
-
-        tempout.forEach((item) => {
-          var tm = item.time
-          if (tm.length === 4) {
-            tm = '0' + tm
-          }
-          final.push({ emp_code: item.emp_code, time: tm })
-
-        // if (moment(moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + item).isSameOrBefore(moment(moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' 8:59').format('YYYY-MM-DD HH:MM'))) {
-        //   final.push({emp_code: item.emp_code, time: moment().format('YYYY-MM-DD') + ' ' + tm})
-        // } else
-        // {
-        //   final.push({emp_code: item.emp_code, time: moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + tm})
-        // }
-        }
-        )
-        var totalsort = _.sortBy(final, function (o) {
-          // let dt = '2017-08-31 ' + o.time
-
-          // let dt = moment(new Date()).add(-1, 'days').format('YYYY-MM-DD')
-
-          //   if (moment(moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + o.time).isSameOrBefore('2017-08-31 06:00')) {
-          //     dt = moment().format('YYYY-MM-DD')
-          //   }
-
-          //   dt = dt + ' ' + o.time
-
-          // return moment(o.time).format('YYYY-MM-DD HH:MM')
-          return o.time
-        })
-
-        // console.log('ts', totalsort.length)
-
-        var requestsMade = 0
-
-        // console.log('total = ', total.count)
-
-        // console.log(totalsort)
-
-        totalsort.forEach(function (driver, index) {
-          if (parseInt(driver.emp_code) === '10947') {
-            console.log('10947', driver)
-          }
-
-          if (requestsMade === 0) {
-            // createUser(data)
-            process(driver, index)
-          } else {
-            if (driver.time !== '') {
-              setTimeout(function () {
-                // createUser(data)
-                process(driver, index)
-              }, 50 * index)
-            } else {
-              console.log('not inserted', driver)
-            }
-          }
-          requestsMade++
-        })
-
-        // var currentTime = moment().format('HH:mm')
-        // console.log('cron - ', currentTime)
-        // var currentTime = '17:00'
-
-        // var temp = total.filter(item => item.time == currentTime)
-        // var temp = arr.filter(item => moment(moment().format("YYYY-MM-DD") + ' ' + item.time).isSameOrBefore(moment()))
-        // var temp = tempout.filter(item => moment(moment().format("YYYY-MM-DD") + ' ' + item.time).isSameOrBefore("2017-08-30 15:30"))
-        // var temp = tempout
-
-      // reply({
-      //   currentTime,
-      //   temp
-      // })
-      }
-    }
-  },
-
-  {
-    path: '/clear',
-    method: 'GET',
-    handler: (request, reply) => {
-      Knex.raw('truncate table data').then((result) => {
-        Knex.raw('truncate table email').then((result) => {
-          Knex.raw('truncate table sms').then((result) => {
-            reply({
-              success: true,
-              message: 'Data cleared'
-            })
-          })
-        })
-      })
-    }
-  },
+  // {
+  //   path: '/clear',
+  //   method: 'GET',
+  //   handler: (request, reply) => {
+  //     Knex.raw('truncate table data').then((result) => {
+  //       Knex.raw('truncate table email').then((result) => {
+  //         Knex.raw('truncate table sms').then((result) => {
+  //           reply({
+  //             success: true,
+  //             message: 'Data cleared'
+  //           })
+  //         })
+  //       })
+  //     })
+  //   }
+  // },
 
   // auto close
   {
@@ -728,15 +601,15 @@ const routes = [
     method: 'GET',
     handler: (request, reply) => {
       var type = parseInt(request.query.type)
-      var query = `update data set closed = 1 where (shift = 'A' or shift = 'G' or shift = 'B') and closed = 0`
+      var query = `update data set closed = 1 where closed = 0 and (shift = 'A' or shift = 'G' or shift = 'B')`
       if (type === 2) {
         // query = `update data set closed = 1 where (shift = 'E' or shift = 'C') and closed = 0`
-        query = `update data set closed = 1 where dt < current_date`
+        query = `update data set closed = 1 where closed = 0 and dt < current_date`
       }
       Knex.raw(query).then((result) => {
         reply({
           success: true,
-          data: result
+          data: 'Auto close records finished'
         })
       })
     }
@@ -1295,94 +1168,6 @@ function insertOrUpdate (knex, tableName, data) {
   const firstData = data[0] ? data[0] : data
   return knex.raw(knex(tableName).insert(data).toQuery() + ' ON DUPLICATE KEY UPDATE ' +
     Object.getOwnPropertyNames(firstData).map(field => `${field}=VALUES(${field})`).join(',  '))
-}
-
-function process (item, index) {
-  // if (item.emp_code == '00013') {
-  //   console.log('00013', item)
-  // }
-  // if (item.emp_code == '10947') {
-  //   console.log('10947', item)
-  // }
-
-  var yesterday = moment(new Date()).add(-1, 'days').format('YYYY-MM-DD')
-  console.log(item.time)
-  // console.log(index)
-
-  let empCode = item.emp_code
-  let tm = item.time
-  console.log(`parse ${empCode} ${tm}`)
-  let dt = moment(new Date()).add(-1, 'days').format('YYYY-MM-DD')
-
-  if (moment(moment(new Date()).add(-1, 'days').format('YYYY-MM-DD') + ' ' + item.time).isSameOrBefore(dt + ' 05:00')) {
-    dt = moment().format('YYYY-MM-DD')
-  }
-
-  // let query = Knex.raw(`select * from data where emp_code = '${empCode}'  and dt = '${dt}' `)
-  let query = Knex.raw(`select * from data where emp_code = '${empCode}'  and closed = 0 `)
-  query.then((results) => {
-    // console.log('results are', results[0].length)
-    if (!results[0].length) {
-      // shift calculation
-      Knex.raw(`select * from shifts where emp_code = '${empCode}' and shift_from <= '${dt}' and shift_to >= '${dt}' `).then((results) => {
-        var shift = 'NA'
-        if (results[0].length) {
-          shift = results[0][0]['shift']
-        }
-
-        // if (shift == 'A' || shift == 'G') {
-        Knex.raw(`insert into data(emp_code, in_time, shift, dt) values('${empCode}', '${tm}', '${shift}', '${dt}')`).then((result) => {
-          // console.log('insert ', result)
-        })
-      // }
-      // } else {
-      //   console.error('shift not found', empCode)
-      // }
-      })
-    } else {
-      let query = `update data set out_time = '${tm}' where emp_code = '${empCode}' and closed = 0;`
-      let shift = results[0].shift
-
-      if (shift === 'E' || shift === 'C') {
-        dt = moment().add(-1, 'days').format('YYYY-MM-DD')
-        query = `update data set out_time = '${tm}' where emp_code = '${empCode}' and dt = '${dt}';`
-      }
-
-      Knex.raw(query).then((result) => {
-        // console.log('shift is ', shift, ' update ', result)
-      })
-    }
-  })
-
-  if (item.time === `${yesterday} 06:15`) {
-    request.get('http://localhost:7879/status?tm=06:15:00&dept=1', null, function (error, response, body) {
-      if (error) throw error
-    })
-  }
-
-  if (item.time === `${yesterday} 08:45`) {
-    request.get('http://localhost:7879/status?tm=08:45:00&dept=1', null, function (error, response, body) {
-      if (error) throw error
-    })
-  }
-
-  if (item.time === `${yesterday} 14:15`) {
-    request.get('http://localhost:7879/status?tm=14:15:00&dept=1', null, function (error, response, body) {
-      if (error) throw error
-    })
-  }
-
-  if (item.time === `${yesterday} 18:15`) {
-    request.get('http://localhost:7879/status?tm=18:15:00&dept=1', null, function (error, response, body) {
-      if (error) throw error
-    })
-  }
-
-  if (item.time === `${yesterday} 22:15`) {
-    request.get('http://localhost:7879/status?tm=22:15:00&dept=1', null, function (error, response, body) {
-      if (error) throw error
-    })
-  }
 }
 
 export default routes
