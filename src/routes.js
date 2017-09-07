@@ -40,12 +40,12 @@ const routes = [
               })
 
               reply({
-                success: 'true',
-                token: token,
-                name: user.name,
-                email: user.email,
-                mobile: user.mobile
-              })
+              success: 'true',
+              token: token,
+              name: user.name,
+              email: user.email,
+              mobile: user.mobile
+            })
             } else {
               reply({ success: false, error: 'incorrect password' })
             }
@@ -109,20 +109,20 @@ const routes = [
                     request3.post(url, {
                       form: body
                     }, function (error, response, body) {
-                      if (!error && parseInt(response.statusCode) === 200) {
+                    if (!error && parseInt(response.statusCode) === 200) {
                       // console.log(body) // Print the google web page.
 
-                        reply({
-                          success: true,
-                          message: 'Password update successful' + hash
-                        })
-                      } else {
-                        reply({
-                          success: false,
-                          message: 'Password update successful, but sending SMS failed. Contact Administrator'
-                        })
-                      }
-                    })
+                      reply({
+                        success: true,
+                        message: 'Password update successful' + hash
+                      })
+                    } else {
+                      reply({
+                        success: false,
+                        message: 'Password update successful, but sending SMS failed. Contact Administrator'
+                      })
+                    }
+                  })
                   }
                 } else {
                   reply({
@@ -462,7 +462,7 @@ const routes = [
                 // 9703400284,
                 // 9441604400
                 // kir: 8500373704
-                to = '9885721144'
+                to = '9885721144,8500373704,9703400284'
               }
               if (to && message) {
                 // console.log(`SMS sent: ${to}, ${message}`)
@@ -624,6 +624,7 @@ const routes = [
       var message = ''
       var mispunch = ''
       var absentees = ''
+      var notInShiftSchedule = ''
 
       // yesterdday
       let query = Knex.raw(`select * from email where dt = subdate(current_date, 1) and (expected > 0 or present > 0) order by deptname, tm`)
@@ -1093,7 +1094,30 @@ const routes = [
               })
               absentees += `</table>`
             }
-            mail(reply, message, mispunch, absentees)
+
+            // Employees present, but not in shift schedule
+            Knex.raw(`SELECT * FROM data WHERE dt = subdate(CURRENT_DATE, 1) and emp_code not in (select emp_code from shifts where shift_from <= subdate(CURRENT_DATE, 1) and shift_to >= subdate(CURRENT_DATE, 1))`).then((result) => {
+              if (result && result[0].length) {
+                notInShiftSchedule += `<table style="width:70%; background-color:#cecdcc"><tr><th style="background-color:#676767;color:#fff;"> Emp Code</th><th style="background-color:#676767;color:#fff" >In Punch</th><th style="background-color:#676767;color:#fff">Out Punch</th></tr>`
+                var temp = result[0]
+                temp.forEach((item) => {
+                  var empCode = item['emp_code']
+                  // var name = item['name'] != null ? item['name'] : '-'
+                  // var shift = item['shift'] != null ? item['shift'] : '-'
+                  var inTime = item['in_time'] != null ? item['in_time'] : '-'
+                  var outTime = item['out_time'] != null ? item['out_time'] : '-'
+                  // var dept = item['dept'] != null ? item['dept'] : '-'
+                  // var designation = item['designation'] != null ? item['designation'] : '-'
+
+                  notInShiftSchedule += `<tr><td align="center">${empCode}</td><td style="padding-left:5px">${inTime}</td><td style="padding-left:5px">${outTime}</td></tr>`
+                })
+                notInShiftSchedule += `</table>`
+              }
+
+              mail(reply, message, mispunch, absentees, notInShiftSchedule)
+            }).catch((err) => {
+              reply('server-side error' + err)
+            })
           }).catch((err) => {
             reply('server-side error' + err)
           })
@@ -1130,13 +1154,13 @@ const routes = [
             })
           } else {
             reply(data)
-            .bytes(data.length)
-            .type('application/sql')
-            .header('content-disposition', 'attachment; filename=data.sql;')
+              .bytes(data.length)
+              .type('application/sql')
+              .header('content-disposition', 'attachment; filename=data.sql;')
 
-            // reply.file(data)
-            // .header('Content-Type', 'application/sql')
-            // .header('Content-Disposition', 'attachment; filename=' + 'reports.sql')
+          // reply.file(data)
+          // .header('Content-Type', 'application/sql')
+          // .header('Content-Disposition', 'attachment; filename=' + 'reports.sql')
           }
         })
       } else {
@@ -1171,7 +1195,7 @@ const routes = [
   }
 ]
 
-function mail (reply, message, mispunch, absentees) {
+function mail (reply, message, mispunch, absentees, notInShiftSchedule) {
   var transporter = nodemailer.createTransport({
     host: 'mail.akrivia.in',
     port: 465,
@@ -1192,6 +1216,10 @@ function mail (reply, message, mispunch, absentees) {
 
   if (absentees) {
     html += `<h3>Absentees</h3>${absentees}`
+  }
+
+  if (notInShiftSchedule) {
+    html += `<h3>Employees not in Shift Schedule</h3>${notInShiftSchedule}`
   }
 
   html += `</body></html>`
