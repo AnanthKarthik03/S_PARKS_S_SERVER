@@ -40,12 +40,12 @@ const routes = [
               })
 
               reply({
-              success: 'true',
-              token: token,
-              name: user.name,
-              email: user.email,
-              mobile: user.mobile
-            })
+                success: 'true',
+                token: token,
+                name: user.name,
+                email: user.email,
+                mobile: user.mobile
+              })
             } else {
               reply({ success: false, error: 'incorrect password' })
             }
@@ -109,7 +109,7 @@ const routes = [
                     request3.post(url, {
                       form: body
                     }, function (error, response, body) {
-                    if (!error && parseInt(response.statusCode) === 200) {
+                      if (!error && parseInt(response.statusCode) === 200) {
                       // console.log(body) // Print the google web page.
 
                       reply({
@@ -122,7 +122,7 @@ const routes = [
                         message: 'Password update successful, but sending SMS failed. Contact Administrator'
                       })
                     }
-                  })
+                    })
                   }
                 } else {
                   reply({
@@ -376,7 +376,7 @@ const routes = [
         })
       }
 
-      let query = Knex.raw(`select emp_code, name, designation, shift, shift_from, shift_to, dept from shifts where shift_from <= '${date}' and shift_to >= '${date}' order by emp_code`)
+      let query = Knex.raw(`select emp_code, name, designation, emp_type, shift, shift_from, shift_to, dept from shifts where shift_from <= '${date}' and shift_to >= '${date}' order by emp_code`)
 
       // console.log(query)
 
