@@ -112,16 +112,16 @@ const routes = [
                       if (!error && parseInt(response.statusCode) === 200) {
                       // console.log(body) // Print the google web page.
 
-                      reply({
-                        success: true,
-                        message: 'Password update successful' + hash
-                      })
-                    } else {
-                      reply({
-                        success: false,
-                        message: 'Password update successful, but sending SMS failed. Contact Administrator'
-                      })
-                    }
+                        reply({
+                          success: true,
+                          message: 'Password update successful' + hash
+                        })
+                      } else {
+                        reply({
+                          success: false,
+                          message: 'Password update successful, but sending SMS failed. Contact Administrator'
+                        })
+                      }
                     })
                   }
                 } else {
@@ -423,9 +423,9 @@ const routes = [
         var tm22 = today + ' 22:00:00'
         var tm2 = today + ' 02:00:00'
 
-        // var smsquery = `SELECT shifts.shift, count(data.emp_code) as present, if(shifts.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift='E' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift=shifts.shift and shift_from <= current_date and shift_to >= current_date group by shift limit 1), 0))))) as expected FROM shifts left join data on data.emp_code = shifts.emp_code and data.dt = CURRENT_DATE and shifts.shift_from <= current_date and shifts.shift_to >= current_date and out_time is null and data.shift <> 'NA' group by shift order by FIELD(shifts.shift,'A','G','B','E','C')`
+        var smsquery = `SELECT shifts.shift, count(data.emp_code) as present, if(shifts.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift='A' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift='G' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='B' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift='E' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='C' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), 0))))) as expected FROM shifts left join data on data.emp_code = shifts.emp_code and data.dt = CURRENT_DATE and shifts.shift_from <= current_date and shifts.shift_to >= current_date and out_time is null and data.shift <> 'NA' group by shift order by FIELD(shifts.shift,'A','G','B','E','C')`
 
-        var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
+        // var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
 
         console.log('sms', smsquery)
 
@@ -435,25 +435,25 @@ const routes = [
         smsq.then((result) => {
           if (result[0].length) {
             result[0].forEach((item) => {
-              var expected = 0
+              // var expected = 0
 
-              if (item.shift === 'A' && moment(tm).isSameOrAfter(moment(tm6)) && moment(tm).isBefore(moment(tm14))) {
-                expected = item.expected
-              }
-              if (item.shift === 'G' && moment(tm).isSameOrAfter(moment(tm830)) && moment(tm).isBefore(moment(tm1730))) {
-                expected = item.expected
-              }
-              if (item.shift === 'B' && moment(tm).isSameOrAfter(moment(tm14)) && moment(tm).isBefore(moment(tm22))) {
-                expected = item.expected
-              }
-              if (item.shift === 'E' && (moment(tm).isSameOrAfter(moment(tm18)) || moment(tm).isBefore(moment(tm2)))) {
-                expected = item.expected
-              }
-              if (item.shift === 'C' && (moment(tm).isSameOrAfter(moment(tm22)) || moment(tm).isBefore(moment(tm6)))) {
-                expected = item.expected
-              }
+              // if (item.shift === 'A' && moment(tm).isSameOrAfter(moment(tm6)) && moment(tm).isBefore(moment(tm14))) {
+              //   expected = item.expected
+              // }
+              // if (item.shift === 'G' && moment(tm).isSameOrAfter(moment(tm830)) && moment(tm).isBefore(moment(tm1730))) {
+              //   expected = item.expected
+              // }
+              // if (item.shift === 'B' && moment(tm).isSameOrAfter(moment(tm14)) && moment(tm).isBefore(moment(tm22))) {
+              //   expected = item.expected
+              // }
+              // if (item.shift === 'E' && (moment(tm).isSameOrAfter(moment(tm18)) || moment(tm).isBefore(moment(tm2)))) {
+              //   expected = item.expected
+              // }
+              // if (item.shift === 'C' && (moment(tm).isSameOrAfter(moment(tm22)) || moment(tm).isBefore(moment(tm6)))) {
+              //   expected = item.expected
+              // }
 
-              message += item.shift + ' - ' + item.present + '/' + expected + '     '
+              message += item.shift + ' - ' + item.present + '/' + item.expected + '     '
             })
             if (message) {
               message = tm.substr(0, tm.length - 3) + ': ' + message.substr(0, message.length - 2)
