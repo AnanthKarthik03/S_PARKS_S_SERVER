@@ -1166,7 +1166,7 @@ const routes = [
         }
 
         // Mispunches
-        Knex.raw(`SELECT d.emp_code, s.name, s.shift, d.in_time, d.out_time, s.dept, s.designation FROM data d left join shifts s on s.emp_code = d.emp_code and s.shift_from <= subdate(CURRENT_DATE, 1) and s.shift_to >= subdate(current_date,1) WHERE closed = 1 and out_time is null order by shift, dept, in_time`).then((result) => {
+        Knex.raw(`SELECT d.emp_code, s.name, s.shift, d.in_time, d.out_time, s.dept, s.designation FROM data d left join shifts s on s.emp_code = d.emp_code and s.shift_from <= subdate(CURRENT_DATE, 1) and s.shift_to >= subdate(current_date,1) WHERE dt = subdate(current_date, 1) and closed = 1 and out_time is null order by shift, dept, in_time`).then((result) => {
           if (result && result[0].length) {
             mispunch += `<table style="width:70%; background-color:#cecdcc"> 
              <tr>
