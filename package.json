@@ -23,6 +23,7 @@
     "knex": "^0.13.0",
     "moment": "^2.18.1",
     "mysql": "^2.13.0",
+    "mysqldump": "^1.4.2",
     "nodemailer": "^4.1.0",
     "request": "^2.81.0",
     "underscore-node": "^0.1.2"

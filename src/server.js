@@ -36,5 +36,5 @@ server.start(err => {
     console.error(err)
   }
 
-  console.log(`Server started at ${server.info.uri}`)
+  console.log(`Server started at ${server.info.uri} ` + new Date())
 })

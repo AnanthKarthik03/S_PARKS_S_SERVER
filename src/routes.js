@@ -8,7 +8,6 @@ var fs = require('fs')
 var excelToJson = require('convert-excel-to-json')
 const nodemailer = require('nodemailer')
 var _ = require('underscore-node')
-var request = require('request')
 
 const routes = [
 
@@ -41,12 +40,12 @@ const routes = [
               })
 
               reply({
-              success: 'true',
-              token: token,
-              name: user.name,
-              email: user.email,
-              mobile: user.mobile
-            })
+                success: 'true',
+                token: token,
+                name: user.name,
+                email: user.email,
+                mobile: user.mobile
+              })
             } else {
               reply({ success: false, error: 'incorrect password' })
             }
@@ -110,20 +109,20 @@ const routes = [
                     request3.post(url, {
                       form: body
                     }, function (error, response, body) {
-                    if (!error && parseInt(response.statusCode) === 200) {
+                      if (!error && parseInt(response.statusCode) === 200) {
                       // console.log(body) // Print the google web page.
 
-                      reply({
-                        success: true,
-                        message: 'Password update successful' + hash
-                      })
-                    } else {
-                      reply({
-                        success: false,
-                        message: 'Password update successful, but sending SMS failed. Contact Administrator'
-                      })
-                    }
-                  })
+                        reply({
+                          success: true,
+                          message: 'Password update successful' + hash
+                        })
+                      } else {
+                        reply({
+                          success: false,
+                          message: 'Password update successful, but sending SMS failed. Contact Administrator'
+                        })
+                      }
+                    })
                   }
                 } else {
                   reply({
@@ -1110,6 +1109,64 @@ const routes = [
     path: '/export',
     method: 'POST',
     handler: (request, reply) => {
+      console.log('in export method. month sent is ' + request.payload.month)
+      if (request.payload.month) {
+        let condition = `year(dt) = year('${request.payload.month}') and month(dt) = month('${request.payload.month}')`
+        var mysqlDump = require('mysqldump')
+        mysqlDump({
+          host: config.DB_HOST,
+          user: config.DB_USER,
+          password: config.DB_PASSWORD,
+          database: config.DB_DB,
+          tables: ['data'],
+          where: {'data': condition},
+          ifNotExist: true,
+          getDump: true
+        }, function (err, data) {
+          if (err) {
+            reply({
+              success: false,
+              message: err
+            })
+          } else {
+            reply(data)
+            .bytes(data.length)
+            .type('application/sql')
+            .header('content-disposition', 'attachment; filename=data.sql;')
+
+            // reply.file(data)
+            // .header('Content-Type', 'application/sql')
+            // .header('Content-Disposition', 'attachment; filename=' + 'reports.sql')
+          }
+        })
+      } else {
+        reply({
+          success: false,
+          message: 'Date is a required parameter'
+        })
+      }
+    }
+  },
+
+  {
+    path: '/export_dates',
+    method: 'GET',
+    handler: (request, reply) => {
+      Knex.raw(`select min(dt) as min_date, max(dt) as max_date from data`).then(result => {
+        console.log(result)
+        if (result && (result[0][0]['min_date'])) {
+          reply({
+            success: true,
+            dateStart: moment(result[0][0]['min_date']).format('YYYY-MM-DD'),
+            dateEnd: moment(result[0][0]['max_date']).format('YYYY-MM-DD')
+          })
+        } else {
+          reply({
+            success: false,
+            message: 'No data found'
+          })
+        }
+      })
     }
   }
 ]

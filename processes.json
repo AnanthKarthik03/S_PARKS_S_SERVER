@@ -3,7 +3,7 @@
         {
             "name": "mitsuba-server",
             "script": "./bootstrap.js",
-            "watch": "./",
+            "watch": "./src/",
             "log_date_format": "YYYY-MM-DD HH:mm Z"
         }
     ]
