@@ -9,7 +9,7 @@ var excelToJson = require('convert-excel-to-json')
 const nodemailer = require('nodemailer')
 var _ = require('underscore-node')
 var request2 = require('request')
-var smsTo = '9885721144'
+var smsTo = '9492452500,9885721144'
 
 const routes = [
 
@@ -24,33 +24,33 @@ const routes = [
         username}).select('password', 'name', 'email', 'mobile').then(([user]) => {
           if (!user) {
             reply({
-            error: true,
-            errMessage: 'The specified user was not found'
-          })
+              error: true,
+              errMessage: 'The specified user was not found'
+            })
             return
           }
 
           bcrypt.compare(password, user.password, function (err, res) {
             if (err) {
-            reply({ success: false, error: 'Password verify failed' })
-          }
+              reply({ success: false, error: 'Password verify failed' })
+            }
             if (res) {
-            const token = jwt.sign(
+              const token = jwt.sign(
               {username}, 'vZiYpmTzqXMp8PpYXKwqc9ShQ1UhyAfy', {
                 algorithm: 'HS256',
                 expiresIn: '24h'
               })
 
-            reply({
-              success: 'true',
-              token: token,
-              name: user.name,
-              email: user.email,
-              mobile: user.mobile
-            })
-          } else {
-            reply({ success: false, error: 'incorrect password' })
-          }
+              reply({
+                success: 'true',
+                token: token,
+                name: user.name,
+                email: user.email,
+                mobile: user.mobile
+              })
+            } else {
+              reply({ success: false, error: 'incorrect password' })
+            }
           })
         }).catch((err) => {
           reply('server-side error' + err)
@@ -99,32 +99,32 @@ const routes = [
                   if (to && msg) {
                     const url = 'http://login.smsmoon.com/API/sms.php'
                     const body = {
-                    'username': 'raghuedu',
-                    'password': 'abcd.1234',
-                    'from': 'RAGHUT',
-                    'to': to,
-                    'msg': msg,
-                    'type': '1',
-                    'dnd_check': '0'
-                  }
+                      'username': 'raghuedu',
+                      'password': 'abcd.1234',
+                      'from': 'RAGHUT',
+                      'to': to,
+                      'msg': msg,
+                      'type': '1',
+                      'dnd_check': '0'
+                    }
                     var request3 = require('request')
                     request3.post(url, {
-                    form: body
-                  }, function (error, response, body) {
-                    if (!error && parseInt(response.statusCode) === 200) {
+                      form: body
+                    }, function (error, response, body) {
+                      if (!error && parseInt(response.statusCode) === 200) {
                       // console.log(body) // Print the google web page.
 
-                      reply({
-                        success: true,
-                        message: 'Password update successful' + hash
-                      })
-                    } else {
-                      reply({
-                        success: false,
-                        message: 'Password update successful, but sending SMS failed. Contact Administrator'
-                      })
-                    }
-                  })
+                        reply({
+                          success: true,
+                          message: 'Password update successful' + hash
+                        })
+                      } else {
+                        reply({
+                          success: false,
+                          message: 'Password update successful, but sending SMS failed. Contact Administrator'
+                        })
+                      }
+                    })
                   }
                 } else {
                   reply({
@@ -308,24 +308,24 @@ const routes = [
             // var dept = ''
             result.Sheet1.forEach((row) => {
               // proceed only if first column is a number, i.e. employee code
-              if (!isNaN(row.A)) {
+              // if (!isNaN(row.A)) {
                 // if (row.C) {
                 //   dept = row.C
                 // }
 
-                if (row.A && row.B && row.C && row.D && row.E && row.F && row.G && row.H && row.G.toString().indexOf('-') !== -1 && row.H.toString().indexOf('-') !== -1) {
-                  shifts.push({
-                    emp_code: row.A.toString().trim(),
-                    name: row.B.toString().trim(),
-                    dept: row.C.toString().trim(),
-                    designation: row.D.toString().trim(),
-                    emp_type: row.E.toString().trim(),
-                    shift: row.F.toString().trim(),
-                    shift_from: row.G.toString().trim(),
-                    shift_to: row.H.toString().trim()
-                  })
-                }
+              if (row.A && row.B && row.C && row.D && row.E && row.F && row.G && row.H && row.G.toString().indexOf('-') !== -1 && row.H.toString().indexOf('-') !== -1) {
+                shifts.push({
+                  emp_code: row.A.toString().trim(),
+                  name: row.B.toString().trim(),
+                  dept: row.C.toString().trim(),
+                  designation: row.D.toString().trim(),
+                  emp_type: row.E.toString().trim(),
+                  shift: row.F.toString().trim(),
+                  shift_from: row.G.toString().trim(),
+                  shift_to: row.H.toString().trim()
+                })
               }
+              // }
             })
 
             console.log(shifts.length)
@@ -587,6 +587,8 @@ const routes = [
     method: 'GET',
     handler: (request, reply) => {
       console.log('in mail function')
+      var params = request.query
+      var today = params.today
 
       var message = ''
       var mispunch = ''
@@ -595,6 +597,10 @@ const routes = [
 
       // yesterdday
       let query = Knex.raw(`select * from email where dt = subdate(current_date, 1) and (expected > 0 or present > 0) order by deptname, tm`)
+
+      if (today == 1) {
+        query = Knex.raw(`select * from email where dt = current_date and (expected > 0 or present > 0) order by deptname, tm`)
+      }
       // today
       // let query = Knex.raw(`select * from email where dt = current_date and (expected > 0 or present > 0) order by deptname, tm `)
 
@@ -1081,7 +1087,7 @@ const routes = [
                 notInShiftSchedule += `</table>`
               }
 
-              mail(reply, message, mispunch, absentees, notInShiftSchedule)
+              mail(request, reply, message, mispunch, absentees, notInShiftSchedule)
             }).catch((err) => {
               reply('server-side error' + err)
             })
@@ -1202,7 +1208,7 @@ function sms (to, message) {
   }
 }
 
-function mail (reply, message, mispunch, absentees, notInShiftSchedule) {
+function mail (request, reply, message, mispunch, absentees, notInShiftSchedule) {
   var transporter = nodemailer.createTransport({
     host: 'mail.akrivia.in',
     port: 465,
@@ -1215,28 +1221,36 @@ function mail (reply, message, mispunch, absentees, notInShiftSchedule) {
   })
 
   // send message
-  var html = `<!DOCTYPE html><html><head><style>table,th,td {border: 1px solid black;border-collapse: collapse;}</style></head><body><h3>Employee Attendance Report - ` + moment(new Date()).add(-1, 'days').format('dddd, Do MMMM YYYY') + `</h3>${message}`
+  let maildate = moment(new Date()).add(-1, 'days').format('dddd, Do MMMM YYYY')
+  if (request.query.today === '1') {
+    maildate = moment(new Date()).format('dddd, Do MMMM YYYY')    
+  }    
 
-  if (mispunch) {
-    html += `<h3>Mispunches</h3>${mispunch}`
-  }
+  var html = `<!DOCTYPE html><html><head><style>table,th,td {border: 1px solid black;border-collapse: collapse;}</style></head><body><h3>Employee Attendance Report - ` + maildate + `</h3>${message}`
 
-  if (absentees) {
-    html += `<h3>Absentees</h3>${absentees}`
-  }
+  if (request.query.today !== '1') {
+    if (mispunch) {
+      html += `<h3>Mispunches</h3>${mispunch}`
+    }
 
-  if (notInShiftSchedule) {
-    html += `<h3>Employees not in Shift Schedule</h3>${notInShiftSchedule}`
+    if (absentees) {
+      html += `<h3>Absentees</h3>${absentees}`
+    }
+
+    if (notInShiftSchedule) {
+      html += `<h3>Employees not in Shift Schedule</h3>${notInShiftSchedule}`
+    }
   }
 
   html += `</body></html>`
 
+
   var mailOptions = {
     from: '"Akrivia" <support@akrivia.in>', // sender address
-    to: 'kiran.ys@akrivia.in', // list of receivers
-    cc: 'ramakrishna.cp@akrivia.in',
+    to: 'maheswararao.kinthada@gmail.com', // list of receivers
+    cc: '',
     bcc: 'vijay.m@akrivia.in',
-    subject: 'MAPS - Employee Attendance Report for ' + moment(new Date()).add(-1, 'days').format('dddd, Do MMMM YYYY'), // Subject line
+    subject: 'MAPS - Employee Attendance Report for ' + maildate, // Subject line
     text: 'MAPS - Employee Attendance Report', // plain text body
     html: html
   }
