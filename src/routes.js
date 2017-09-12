@@ -427,7 +427,7 @@ const routes = [
 
         // var smsquery = `SELECT shifts.shift, count(data.emp_code) as present, if(shifts.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift='A' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift='G' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='B' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift='E' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='C' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), 0))))) as expected FROM shifts left join data on data.emp_code = shifts.emp_code and data.closed = 0 and shifts.shift_from <= current_date and shifts.shift_to >= current_date and out_time is null and data.shift <> 'NA' group by shift order by FIELD(shifts.shift,'A','G','B','E','C')`
 
-        var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
+        var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.out_time is null and d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
 
         console.log('sms', smsquery)
 
@@ -1223,8 +1223,8 @@ function mail (request, reply, message, mispunch, absentees, notInShiftSchedule)
   // send message
   let maildate = moment(new Date()).add(-1, 'days').format('dddd, Do MMMM YYYY')
   if (request.query.today === '1') {
-    maildate = moment(new Date()).format('dddd, Do MMMM YYYY')    
-  }    
+    maildate = moment(new Date()).format('dddd, Do MMMM YYYY')
+  }
 
   var html = `<!DOCTYPE html><html><head><style>table,th,td {border: 1px solid black;border-collapse: collapse;}</style></head><body><h3>Employee Attendance Report - ` + maildate + `</h3>${message}`
 
@@ -1243,7 +1243,6 @@ function mail (request, reply, message, mispunch, absentees, notInShiftSchedule)
   }
 
   html += `</body></html>`
-
 
   var mailOptions = {
     from: '"Akrivia" <support@akrivia.in>', // sender address
