@@ -8,6 +8,8 @@ var fs = require('fs')
 var excelToJson = require('convert-excel-to-json')
 const nodemailer = require('nodemailer')
 var _ = require('underscore-node')
+var request2 = require('request')
+var smsTo = '9885721144'
 
 const routes = [
 
@@ -22,33 +24,33 @@ const routes = [
         username}).select('password', 'name', 'email', 'mobile').then(([user]) => {
           if (!user) {
             reply({
-              error: true,
-              errMessage: 'The specified user was not found'
-            })
+            error: true,
+            errMessage: 'The specified user was not found'
+          })
             return
           }
 
           bcrypt.compare(password, user.password, function (err, res) {
             if (err) {
-              reply({ success: false, error: 'Password verify failed' })
-            }
+            reply({ success: false, error: 'Password verify failed' })
+          }
             if (res) {
-              const token = jwt.sign(
+            const token = jwt.sign(
               {username}, 'vZiYpmTzqXMp8PpYXKwqc9ShQ1UhyAfy', {
                 algorithm: 'HS256',
                 expiresIn: '24h'
               })
 
-              reply({
-                success: 'true',
-                token: token,
-                name: user.name,
-                email: user.email,
-                mobile: user.mobile
-              })
-            } else {
-              reply({ success: false, error: 'incorrect password' })
-            }
+            reply({
+              success: 'true',
+              token: token,
+              name: user.name,
+              email: user.email,
+              mobile: user.mobile
+            })
+          } else {
+            reply({ success: false, error: 'incorrect password' })
+          }
           })
         }).catch((err) => {
           reply('server-side error' + err)
@@ -97,32 +99,32 @@ const routes = [
                   if (to && msg) {
                     const url = 'http://login.smsmoon.com/API/sms.php'
                     const body = {
-                      'username': 'raghuedu',
-                      'password': 'abcd.1234',
-                      'from': 'RAGHUT',
-                      'to': to,
-                      'msg': msg,
-                      'type': '1',
-                      'dnd_check': '0'
-                    }
+                    'username': 'raghuedu',
+                    'password': 'abcd.1234',
+                    'from': 'RAGHUT',
+                    'to': to,
+                    'msg': msg,
+                    'type': '1',
+                    'dnd_check': '0'
+                  }
                     var request3 = require('request')
                     request3.post(url, {
-                      form: body
-                    }, function (error, response, body) {
-                      if (!error && parseInt(response.statusCode) === 200) {
+                    form: body
+                  }, function (error, response, body) {
+                    if (!error && parseInt(response.statusCode) === 200) {
                       // console.log(body) // Print the google web page.
 
-                        reply({
-                          success: true,
-                          message: 'Password update successful' + hash
-                        })
-                      } else {
-                        reply({
-                          success: false,
-                          message: 'Password update successful, but sending SMS failed. Contact Administrator'
-                        })
-                      }
-                    })
+                      reply({
+                        success: true,
+                        message: 'Password update successful' + hash
+                      })
+                    } else {
+                      reply({
+                        success: false,
+                        message: 'Password update successful, but sending SMS failed. Contact Administrator'
+                      })
+                    }
+                  })
                   }
                 } else {
                   reply({
@@ -409,7 +411,7 @@ const routes = [
       var to = params.to
       var query
 
-      // used for sms
+      // used for cron sms
       if (tm) {
         console.log('in sms', tm)
 
@@ -423,9 +425,9 @@ const routes = [
         var tm22 = today + ' 22:00:00'
         var tm2 = today + ' 02:00:00'
 
-        var smsquery = `SELECT shifts.shift, count(data.emp_code) as present, if(shifts.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift='A' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift='G' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='B' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift='E' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='C' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), 0))))) as expected FROM shifts left join data on data.emp_code = shifts.emp_code and data.closed = 0 and shifts.shift_from <= current_date and shifts.shift_to >= current_date and out_time is null and data.shift <> 'NA' group by shift order by FIELD(shifts.shift,'A','G','B','E','C')`
+        // var smsquery = `SELECT shifts.shift, count(data.emp_code) as present, if(shifts.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift='A' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift='G' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='B' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift='E' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='C' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), 0))))) as expected FROM shifts left join data on data.emp_code = shifts.emp_code and data.closed = 0 and shifts.shift_from <= current_date and shifts.shift_to >= current_date and out_time is null and data.shift <> 'NA' group by shift order by FIELD(shifts.shift,'A','G','B','E','C')`
 
-        // var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
+        var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
 
         console.log('sms', smsquery)
 
@@ -435,76 +437,41 @@ const routes = [
         smsq.then((result) => {
           if (result[0].length) {
             result[0].forEach((item) => {
-              // var expected = 0
+              var expected = 0
 
-              // if (item.shift === 'A' && moment(tm).isSameOrAfter(moment(tm6)) && moment(tm).isBefore(moment(tm14))) {
-              //   expected = item.expected
-              // }
-              // if (item.shift === 'G' && moment(tm).isSameOrAfter(moment(tm830)) && moment(tm).isBefore(moment(tm1730))) {
-              //   expected = item.expected
-              // }
-              // if (item.shift === 'B' && moment(tm).isSameOrAfter(moment(tm14)) && moment(tm).isBefore(moment(tm22))) {
-              //   expected = item.expected
-              // }
-              // if (item.shift === 'E' && (moment(tm).isSameOrAfter(moment(tm18)) || moment(tm).isBefore(moment(tm2)))) {
-              //   expected = item.expected
-              // }
-              // if (item.shift === 'C' && (moment(tm).isSameOrAfter(moment(tm22)) || moment(tm).isBefore(moment(tm6)))) {
-              //   expected = item.expected
-              // }
+              if (item.shift === 'A' && moment(tm).isSameOrAfter(moment(tm6)) && moment(tm).isBefore(moment(tm14))) {
+                expected = item.expected
+              }
+              if (item.shift === 'G' && moment(tm).isSameOrAfter(moment(tm830)) && moment(tm).isBefore(moment(tm1730))) {
+                expected = item.expected
+              }
+              if (item.shift === 'B' && moment(tm).isSameOrAfter(moment(tm14)) && moment(tm).isBefore(moment(tm22))) {
+                expected = item.expected
+              }
+              if (item.shift === 'E' && (moment(tm).isSameOrAfter(moment(tm18)) || moment(tm).isBefore(moment(tm2)))) {
+                expected = item.expected
+              }
+              if (item.shift === 'C' && (moment(tm).isSameOrAfter(moment(tm22)) || moment(tm).isBefore(moment(tm6)))) {
+                expected = item.expected
+              }
 
-              message += item.shift + ' - ' + item.present + '/' + item.expected + '     '
+              message += item.shift + ' - ' + item.present + '/' + expected + '     '
             })
             if (message) {
               message = tm.substr(0, tm.length - 3) + ': ' + message.substr(0, message.length - 2)
-              if (!to) {
-                // nik 9491273518
-                // 9703400284,
-                // 9441604400
-                // kir: 8500373704
-                to = '9885721144,8500373704,9703400284'
-              }
-              if (to && message) {
+
+              if (smsTo && message) {
                 // console.log(`SMS sent: ${to}, ${message}`)
-                var request2 = require('request')
-                const url = 'http://login.smsmoon.com/API/sms.php'
-                const body = {
-                  'username': 'Raghugroup',
-                  'password': 'Abcd@1234',
-                  'from': 'AKSOFT',
-                  'to': to,
-                  'msg': message,
-                  'type': '1',
-                  'dnd_check': '0'
-                }
-
-                console.log('sms:', message)
-                request2.post(url, {
-                  form: body
-                }, function (error, response, body) {
-                  if (!error && parseInt(response.statusCode) === 200) {
-                    console.log(body) // Print the google web page.
-
-                    Knex('sms').insert({
-                      mobile: to,
-                      message: message
-                    }).then((result) => {
-                      // console.log(result)
-                    })
-
-                    reply({
-                      success: true,
-                      data: 'SMS sent successfully'
-                    })
-                  }
-                })
+                sms(smsTo, message)
               } else {
                 reply({
                   success: false,
-                  error: 'Sending SMS failed'
+                  error: 'Sending SMS failed. To or Message missing.'
                 })
               }
             }
+          } else {
+            reply(sms(smsTo, 'No shift schedule added for the day'))
           }
         })
       }
@@ -635,7 +602,7 @@ const routes = [
 
       query.then((results) => {
         if (!results || results[0].length === 0) {
-          message = 'No data found'
+          message = 'No shift schedule added for the day'
         } else {
           var data = results[0]
           var types = ['Direct', 'Indirect']
@@ -1194,6 +1161,46 @@ const routes = [
     }
   }
 ]
+
+function sms (to, message) {
+  if (to && message) {
+    const url = 'http://login.smsmoon.com/API/sms.php'
+    const body = {
+      'username': 'Raghugroup',
+      'password': 'Abcd@1234',
+      'from': 'AKSOFT',
+      'to': to,
+      'msg': message,
+      'type': '1',
+      'dnd_check': '0'
+    }
+
+    request2.post(url, {
+      form: body
+    }, function (error, response, body) {
+      if (!error && parseInt(response.statusCode) === 200) {
+        console.log(body) // Print the google web page.
+
+        Knex('sms').insert({
+          mobile: to,
+          message: message
+        }).then((result) => {
+          // console.log(result)
+        })
+
+        return {
+          success: true,
+          data: 'SMS sent successfully'
+        }
+      }
+    })
+  } else {
+    return {
+      success: false,
+      message: 'To or Message missing'
+    }
+  }
+}
 
 function mail (reply, message, mispunch, absentees, notInShiftSchedule) {
   var transporter = nodemailer.createTransport({
