@@ -515,7 +515,7 @@ const routes = [
     path: '/employees',
     method: 'GET',
     handler: (request, reply) => {
-      Knex.raw(`SELECT data.emp_code, shifts.name, shifts.designation, shifts.dept, shifts.shift, shifts.emp_type, data.in_time FROM data inner join shifts on shifts.shift_from <= data.dt and shifts.shift_to >= data.dt and shifts.emp_code = data.emp_code where closed = 0 and out_time is null and dt >= subdate(current_date, 1) group by data.emp_code ORDER BY in_time ASC, emp_code asc`).then((result) => {
+      Knex.raw(`SELECT data.emp_code, data.dt, shifts.name, shifts.designation, shifts.dept, shifts.shift, shifts.emp_type, data.in_time FROM data inner join shifts on shifts.shift_from <= data.dt and shifts.shift_to >= data.dt and shifts.emp_code = data.emp_code where closed = 0 and out_time is null and dt >= subdate(current_date, 1) group by data.emp_code ORDER BY in_time ASC, emp_code asc`).then((result) => {
         if (!result[0].length) {
           return reply({
             success: false,
