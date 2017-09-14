@@ -9,7 +9,8 @@ var excelToJson = require('convert-excel-to-json')
 const nodemailer = require('nodemailer')
 var _ = require('underscore-node')
 var request2 = require('request')
-var smsTo = '9492452500,9885721144'
+var smsTo = '8500373704,9441604400,9492452500,9885721144,9491273518,9940631936,9944929534,9786469226,8807844112,7418457962,9840303590'
+// var smsTo = '9885721144'
 
 const routes = [
 
@@ -21,40 +22,40 @@ const routes = [
     handler: (request, reply) => {
       const { username, password } = request.payload
       Knex('users').where({
-        username}).select('password', 'name', 'email', 'mobile').then(([user]) => {
-          if (!user) {
-            reply({
-              error: true,
-              errMessage: 'The specified user was not found'
-            })
-            return
-          }
+      username}).select('password', 'name', 'email', 'mobile').then(([user]) => {
+        if (!user) {
+          reply({
+            error: true,
+            errMessage: 'The specified user was not found'
+          })
+          return
+        }
 
-          bcrypt.compare(password, user.password, function (err, res) {
-            if (err) {
-              reply({ success: false, error: 'Password verify failed' })
-            }
-            if (res) {
-              const token = jwt.sign(
+        bcrypt.compare(password, user.password, function (err, res) {
+          if (err) {
+            reply({ success: false, error: 'Password verify failed' })
+          }
+          if (res) {
+            const token = jwt.sign(
               {username}, 'vZiYpmTzqXMp8PpYXKwqc9ShQ1UhyAfy', {
                 algorithm: 'HS256',
                 expiresIn: '24h'
               })
 
-              reply({
-                success: 'true',
-                token: token,
-                name: user.name,
-                email: user.email,
-                mobile: user.mobile
-              })
-            } else {
-              reply({ success: false, error: 'incorrect password' })
-            }
-          })
-        }).catch((err) => {
-          reply('server-side error' + err)
+            reply({
+              success: 'true',
+              token: token,
+              name: user.name,
+              email: user.email,
+              mobile: user.mobile
+            })
+          } else {
+            reply({ success: false, error: 'incorrect password' })
+          }
         })
+      }).catch((err) => {
+        reply('server-side error' + err)
+      })
     }
   },
 
@@ -91,48 +92,48 @@ const routes = [
               .update({
                 password: hash
               }).then((count) => {
-                if (count) {
-                  const to = user.mobile
-                  const msg = 'Your new password at Mitsuba is ' + newPassword
+              if (count) {
+                const to = user.mobile
+                const msg = 'Your new password at Mitsuba is ' + newPassword
 
                 // send sms
-                  if (to && msg) {
-                    const url = 'http://login.smsmoon.com/API/sms.php'
-                    const body = {
-                      'username': 'raghuedu',
-                      'password': 'abcd.1234',
-                      'from': 'RAGHUT',
-                      'to': to,
-                      'msg': msg,
-                      'type': '1',
-                      'dnd_check': '0'
-                    }
-                    var request3 = require('request')
-                    request3.post(url, {
-                      form: body
-                    }, function (error, response, body) {
-                      if (!error && parseInt(response.statusCode) === 200) {
+                if (to && msg) {
+                  const url = 'http://login.smsmoon.com/API/sms.php'
+                  const body = {
+                    'username': 'raghuedu',
+                    'password': 'abcd.1234',
+                    'from': 'RAGHUT',
+                    'to': to,
+                    'msg': msg,
+                    'type': '1',
+                    'dnd_check': '0'
+                  }
+                  var request3 = require('request')
+                  request3.post(url, {
+                    form: body
+                  }, function (error, response, body) {
+                    if (!error && parseInt(response.statusCode) === 200) {
                       // console.log(body) // Print the google web page.
 
-                        reply({
-                          success: true,
-                          message: 'Password update successful' + hash
-                        })
-                      } else {
-                        reply({
-                          success: false,
-                          message: 'Password update successful, but sending SMS failed. Contact Administrator'
-                        })
-                      }
-                    })
-                  }
-                } else {
-                  reply({
-                    success: false,
-                    message: 'Password update failed'
+                      reply({
+                        success: true,
+                        message: 'Password update successful' + hash
+                      })
+                    } else {
+                      reply({
+                        success: false,
+                        message: 'Password update successful, but sending SMS failed. Contact Administrator'
+                      })
+                    }
                   })
                 }
-              })
+              } else {
+                reply({
+                  success: false,
+                  message: 'Password update failed'
+                })
+              }
+            })
           } else {
             // no hash generated
             reply('No hash generated, please contact administrator')
@@ -231,18 +232,18 @@ const routes = [
         Knex('users')
           .where({username: username})
           .update(data).then((count) => {
-            if (count) {
-              reply({
-                success: true,
-                message: 'Profile update successful'
-              })
-            } else {
-              reply({
-                success: false,
-                message: 'Password update failed'
-              })
-            }
-          })
+          if (count) {
+            reply({
+              success: true,
+              message: 'Profile update successful'
+            })
+          } else {
+            reply({
+              success: false,
+              message: 'Password update failed'
+            })
+          }
+        })
       }).catch((err) => {
         reply('server-side error' + err)
       })
@@ -309,9 +310,9 @@ const routes = [
             result.Sheet1.forEach((row) => {
               // proceed only if first column is a number, i.e. employee code
               // if (!isNaN(row.A)) {
-                // if (row.C) {
-                //   dept = row.C
-                // }
+              // if (row.C) {
+              //   dept = row.C
+              // }
 
               if (row.A && row.B && row.C && row.D && row.E && row.F && row.G && row.H && row.G.toString().indexOf('-') !== -1 && row.H.toString().indexOf('-') !== -1) {
                 shifts.push({
@@ -325,7 +326,7 @@ const routes = [
                   shift_to: row.H.toString().trim()
                 })
               }
-              // }
+            // }
             })
 
             console.log(shifts.length)
@@ -420,7 +421,8 @@ const routes = [
         var tm6 = today + ' 06:00:00'
         var tm830 = today + ' 08:30:00'
         var tm14 = today + ' 14:00:00'
-        var tm1730 = today + ' 17:30:00'
+        // var tm1730 = today + ' 17:30:00'
+        var tm1730 = today + ' 17:00:00'
         var tm18 = today + ' 18:00:00'
         var tm22 = today + ' 22:00:00'
         var tm2 = today + ' 02:00:00'
@@ -524,7 +526,8 @@ const routes = [
       var tm6 = today + ' 06:00:00'
       var tm14 = today + ' 14:00:00'
       var tm830 = today + ' 08:30:00'
-      var tm1730 = today + ' 17:30:00'
+      // var tm1730 = today + ' 17:30:00'
+      var tm1730 = today + ' 17:00:00'
       var tm1415 = today + ' 14:15:00'
       var tm22 = today + ' 22:00:00'
       var tm18 = today + ' 18:00:00'
@@ -537,7 +540,7 @@ const routes = [
       Knex.raw(deptq).then((result) => {
         reply({
           success: true,
-          result})
+        result})
       })
     }
   },
@@ -587,8 +590,6 @@ const routes = [
     method: 'GET',
     handler: (request, reply) => {
       console.log('in mail function')
-      var params = request.query
-      var today = params.today
 
       var message = ''
       var mispunch = ''
@@ -598,9 +599,6 @@ const routes = [
       // yesterdday
       let query = Knex.raw(`select * from email where dt = subdate(current_date, 1) and (expected > 0 or present > 0) order by deptname, tm`)
 
-      if (today == 1) {
-        query = Knex.raw(`select * from email where dt = current_date and (expected > 0 or present > 0) order by deptname, tm`)
-      }
       // today
       // let query = Knex.raw(`select * from email where dt = current_date and (expected > 0 or present > 0) order by deptname, tm `)
 
@@ -610,15 +608,31 @@ const routes = [
         if (!results || results[0].length === 0) {
           message = 'No shift schedule added for the day'
         } else {
-          var data = results[0]
+          let data = []
+
+          // Change all data to caps to prevent case sensitivity issue
+          results[0].forEach(item => {
+            console.log(item)
+            data.push({
+              dt: item.dt,
+              tm: item.tm,
+              deptname: item.deptname !== null ? item.deptname.toString().toUpperCase() : '',
+              shift: item.shift !== null ? item.shift.toString().toUpperCase() : '',
+              present: item.present,
+              expected: item.expected,
+              emp_type: item.emp_type.toString().toUpperCase()
+            })
+          })
+
           var types = ['Direct', 'Indirect']
           types.forEach((type) => {
-            var t = data.filter(function (item) {
-              console.log(item)
-              return item.emp_type === type
+            // var t = data.filter(function (item) {
+            //   return item.emp_type === type
+            // })
+            var t = _.filter(data, (item) => {
+              return item.emp_type.toString().toUpperCase() === type.toString().toUpperCase()
             })
             var depts = _.uniq(_.pluck(t, 'deptname'))
-            // console.log('departments are', depts)
             var currentDepartment = null
 
             message += `<h3>${type}</h3><table style="width:100%">
@@ -1246,9 +1260,10 @@ function mail (request, reply, message, mispunch, absentees, notInShiftSchedule)
 
   var mailOptions = {
     from: '"Akrivia" <support@akrivia.in>', // sender address
-    to: 'maheswararao.kinthada@gmail.com', // list of receivers
-    cc: '',
-    bcc: 'vijay.m@akrivia.in',
+    to: 'rajarathinam-j@msil.mitsuba-gr.com,venkatesh-kumar@msil.mitsuba-gr.com', // list of receivers
+    cc: 'maheswararao.kinthada@gmail.com',
+    bcc: 'vijay.m@akrivia.in,i.nikhil@akrivia.in,kiran.ys@akrivia.in,ramakrishna.cp@akrivia.in',
+    // to: 'vijay.m@akrivia.in', // list of receivers
     subject: 'MAPS - Employee Attendance Report for ' + maildate, // Subject line
     text: 'MAPS - Employee Attendance Report', // plain text body
     html: html
