@@ -22,40 +22,40 @@ const routes = [
     handler: (request, reply) => {
       const { username, password } = request.payload
       Knex('users').where({
-      username}).select('password', 'name', 'email', 'mobile').then(([user]) => {
-        if (!user) {
-          reply({
-            error: true,
-            errMessage: 'The specified user was not found'
-          })
-          return
-        }
-
-        bcrypt.compare(password, user.password, function (err, res) {
-          if (err) {
-            reply({ success: false, error: 'Password verify failed' })
+        username}).select('password', 'name', 'email', 'mobile').then(([user]) => {
+          if (!user) {
+            reply({
+              error: true,
+              errMessage: 'The specified user was not found'
+            })
+            return
           }
-          if (res) {
-            const token = jwt.sign(
+
+          bcrypt.compare(password, user.password, function (err, res) {
+            if (err) {
+              reply({ success: false, error: 'Password verify failed' })
+            }
+            if (res) {
+              const token = jwt.sign(
               {username}, 'vZiYpmTzqXMp8PpYXKwqc9ShQ1UhyAfy', {
                 algorithm: 'HS256',
                 expiresIn: '24h'
               })
 
-            reply({
-              success: 'true',
-              token: token,
-              name: user.name,
-              email: user.email,
-              mobile: user.mobile
-            })
-          } else {
-            reply({ success: false, error: 'incorrect password' })
-          }
+              reply({
+                success: 'true',
+                token: token,
+                name: user.name,
+                email: user.email,
+                mobile: user.mobile
+              })
+            } else {
+              reply({ success: false, error: 'incorrect password' })
+            }
+          })
+        }).catch((err) => {
+          reply('server-side error' + err)
         })
-      }).catch((err) => {
-        reply('server-side error' + err)
-      })
     }
   },
 
@@ -92,48 +92,48 @@ const routes = [
               .update({
                 password: hash
               }).then((count) => {
-              if (count) {
-                const to = user.mobile
-                const msg = 'Your new password at Mitsuba is ' + newPassword
+                if (count) {
+                  const to = user.mobile
+                  const msg = 'Your new password at Mitsuba is ' + newPassword
 
                 // send sms
-                if (to && msg) {
-                  const url = 'http://login.smsmoon.com/API/sms.php'
-                  const body = {
-                    'username': 'raghuedu',
-                    'password': 'abcd.1234',
-                    'from': 'RAGHUT',
-                    'to': to,
-                    'msg': msg,
-                    'type': '1',
-                    'dnd_check': '0'
-                  }
-                  var request3 = require('request')
-                  request3.post(url, {
-                    form: body
-                  }, function (error, response, body) {
-                    if (!error && parseInt(response.statusCode) === 200) {
+                  if (to && msg) {
+                    const url = 'http://login.smsmoon.com/API/sms.php'
+                    const body = {
+                      'username': 'raghuedu',
+                      'password': 'abcd.1234',
+                      'from': 'RAGHUT',
+                      'to': to,
+                      'msg': msg,
+                      'type': '1',
+                      'dnd_check': '0'
+                    }
+                    var request3 = require('request')
+                    request3.post(url, {
+                      form: body
+                    }, function (error, response, body) {
+                      if (!error && parseInt(response.statusCode) === 200) {
                       // console.log(body) // Print the google web page.
 
-                      reply({
-                        success: true,
-                        message: 'Password update successful' + hash
-                      })
-                    } else {
-                      reply({
-                        success: false,
-                        message: 'Password update successful, but sending SMS failed. Contact Administrator'
-                      })
-                    }
+                        reply({
+                          success: true,
+                          message: 'Password update successful' + hash
+                        })
+                      } else {
+                        reply({
+                          success: false,
+                          message: 'Password update successful, but sending SMS failed. Contact Administrator'
+                        })
+                      }
+                    })
+                  }
+                } else {
+                  reply({
+                    success: false,
+                    message: 'Password update failed'
                   })
                 }
-              } else {
-                reply({
-                  success: false,
-                  message: 'Password update failed'
-                })
-              }
-            })
+              })
           } else {
             // no hash generated
             reply('No hash generated, please contact administrator')
@@ -232,18 +232,18 @@ const routes = [
         Knex('users')
           .where({username: username})
           .update(data).then((count) => {
-          if (count) {
-            reply({
-              success: true,
-              message: 'Profile update successful'
-            })
-          } else {
-            reply({
-              success: false,
-              message: 'Password update failed'
-            })
-          }
-        })
+            if (count) {
+              reply({
+                success: true,
+                message: 'Profile update successful'
+              })
+            } else {
+              reply({
+                success: false,
+                message: 'Password update failed'
+              })
+            }
+          })
       }).catch((err) => {
         reply('server-side error' + err)
       })
@@ -379,7 +379,9 @@ const routes = [
         })
       }
 
-      let query = Knex.raw(`select emp_code, name, designation, emp_type, shift, shift_from, shift_to, dept from shifts where shift_from <= '${date}' and shift_to >= '${date}' order by emp_code`)
+      // let query = Knex.raw(`select emp_code, name, designation, emp_type, shift, shift_from, shift_to, dept from shifts where shift_from <= '${date}' and shift_to >= '${date}' order by emp_code, created_at desc`)
+
+      let query = Knex.raw(`select s1.emp_code, s1.name, s1.designation, s1.emp_type, s1.shift, s1.shift_from, s1.shift_to, s1.dept from shifts s1 WHERE s1.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s1.emp_code and shift_from <= '${date}' and shift_to >= '${date}') and shift_from <= '${date}' and shift_to >= '${date}'  ORDER BY s1.emp_code ASC`)
 
       // console.log(query)
 
@@ -416,8 +418,8 @@ const routes = [
       if (tm) {
         console.log('in sms', tm)
 
-        var today = moment().format('YYYY-MM-DD')
-        tm = today + ' ' + tm
+        var today = moment().format('MMM D')
+        tm = today + ', ' + tm
         var tm6 = today + ' 06:00:00'
         var tm830 = today + ' 08:30:00'
         var tm14 = today + ' 14:00:00'
@@ -429,7 +431,20 @@ const routes = [
 
         // var smsquery = `SELECT shifts.shift, count(data.emp_code) as present, if(shifts.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where shift='A' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where shift='G' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm14}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='B' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where shift='E' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), if(shifts.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where shift='C' and shift_from <= current_date and shift_to >= current_date group by shift limit 1), 0))))) as expected FROM shifts left join data on data.emp_code = shifts.emp_code and data.closed = 0 and shifts.shift_from <= current_date and shifts.shift_to >= current_date and out_time is null and data.shift <> 'NA' group by shift order by FIELD(shifts.shift,'A','G','B','E','C')`
 
-        var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.out_time is null and d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
+        // var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.out_time is null and d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
+
+        // var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.out_time is null and d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) and s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
+
+        // var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.closed = 0 and d.out_time is null and d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE and s.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
+
+        // sms query with departments ah and ac
+        var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected,
+        
+        (select count(data.emp_code) from data inner join shifts on shifts.emp_code = data.emp_code and shifts.dept = 'ADMINISTRATION - HOUSE KEEPING' and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE and shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) where data.closed = 0 and data.dt = CURRENT_DATE and data.shift = s.shift ) as ah,
+        
+        (select count(data.emp_code) from data inner join shifts on shifts.emp_code = data.emp_code and shifts.dept = 'ADMINISTRATION - CANTEEN' and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE and shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) where data.closed = 0 and data.dt = CURRENT_DATE and data.shift = s.shift ) as ac
+        
+        FROM shifts s left join data d on d.closed = 0 and d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE and s.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
 
         console.log('sms', smsquery)
 
@@ -441,26 +456,43 @@ const routes = [
             result[0].forEach((item) => {
               var expected = 0
 
-              if (item.shift === 'A' && moment(tm).isSameOrAfter(moment(tm6)) && moment(tm).isBefore(moment(tm14))) {
+              // if (item.shift === 'A' && moment(tm).isSameOrAfter(moment(tm6)) && moment(tm).isBefore(moment(tm14))) {
+              //   expected = item.expected
+              // }
+              // if (item.shift === 'G' && moment(tm).isSameOrAfter(moment(tm830)) && moment(tm).isBefore(moment(tm1730))) {
+              //   expected = item.expected
+              // }
+              // if (item.shift === 'B' && moment(tm).isSameOrAfter(moment(tm14)) && moment(tm).isBefore(moment(tm22))) {
+              //   expected = item.expected
+              // }
+              // if (item.shift === 'E' && (moment(tm).isSameOrAfter(moment(tm18)) || moment(tm).isBefore(moment(tm2)))) {
+              //   expected = item.expected
+              // }
+              // if (item.shift === 'C' && (moment(tm).isSameOrAfter(moment(tm22)) || moment(tm).isBefore(moment(tm6)))) {
+              //   expected = item.expected
+              // }
+
+              if (item.shift === 'A' && moment(tm).isSameOrAfter(moment(tm6))) {
                 expected = item.expected
               }
-              if (item.shift === 'G' && moment(tm).isSameOrAfter(moment(tm830)) && moment(tm).isBefore(moment(tm1730))) {
+              if (item.shift === 'G' && moment(tm).isSameOrAfter(moment(tm830))) {
                 expected = item.expected
               }
-              if (item.shift === 'B' && moment(tm).isSameOrAfter(moment(tm14)) && moment(tm).isBefore(moment(tm22))) {
+              if (item.shift === 'B' && moment(tm).isSameOrAfter(moment(tm14))) {
                 expected = item.expected
               }
-              if (item.shift === 'E' && (moment(tm).isSameOrAfter(moment(tm18)) || moment(tm).isBefore(moment(tm2)))) {
+              if (item.shift === 'E' && moment(tm).isSameOrAfter(moment(tm18))) {
                 expected = item.expected
               }
-              if (item.shift === 'C' && (moment(tm).isSameOrAfter(moment(tm22)) || moment(tm).isBefore(moment(tm6)))) {
+              if (item.shift === 'C' && moment(tm).isSameOrAfter(moment(tm22))) {
                 expected = item.expected
               }
 
-              message += item.shift + ' - ' + item.present + '/' + expected + '     '
+              message += `%0a${item.shift} - ${item.present}/${expected} (AH-${item.ah}, AC-${item.ac})`
             })
             if (message) {
-              message = tm.substr(0, tm.length - 3) + ': ' + message.substr(0, message.length - 2)
+              // message = tm.substr(0, tm.length - 3) + '  ' + message.substr(0, message.length - 2)
+              message = tm.substr(0, tm.length - 3) + '  ' + message
 
               if (smsTo && message) {
                 // console.log(`SMS sent: ${to}, ${message}`)
@@ -490,7 +522,11 @@ const routes = [
         WHERE closed = 0 and (dt = CURRENT_DATE or dt = subdate(current_date, 1)) and out_time is null and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE group by data.shift, shifts.dept order by shift asc,present desc,expected desc`)
         */
 
-        query = Knex.raw(`select shifts.dept as deptname, shifts.shift, count(*) as expected, count(data.emp_code) as present from shifts left join data on data.out_time is null and data.closed = 0 and data.emp_code = shifts.emp_code where shift_from <= current_date and shift_to >= current_date group by shifts.dept, shifts.shift order by shifts.shift, present, shifts.dept`)
+        // query = Knex.raw(`select shifts.dept as deptname, shifts.shift, count(*) as expected, count(data.emp_code) as present from shifts left join data on data.out_time is null and data.closed = 0 and data.emp_code = shifts.emp_code where shift_from <= current_date and shift_to >= current_date group by shifts.dept, shifts.shift order by shifts.shift, present, shifts.dept`)
+
+        // query = Knex.raw(`select shifts.dept as deptname, shifts.shift, count(*) as expected, count(data.emp_code) as present from shifts left join data on data.out_time is null and data.closed = 0 and data.emp_code = shifts.emp_code where shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= if (CURRENT_TIME > '06:00:00', CURRENT_DATE, subdate(current_date,1)) and shift_to >= if (CURRENT_TIME > '06:00:00', CURRENT_DATE, subdate(current_date,1))) and shift_from <= if (CURRENT_TIME >'06:00:00', CURRENT_DATE, subdate(current_date,1)) and shift_to >= if (CURRENT_TIME >'06:00:00', CURRENT_DATE, subdate(current_date,1)) group by shifts.dept, shifts.shift order by shifts.shift, present, shifts.dept`)
+
+        query = Knex.raw(`select shifts.dept as deptname, shifts.shift, count(*) as expected, count(data.emp_code) as present from shifts left join data on data.out_time is null and data.closed = 0 and data.emp_code = shifts.emp_code and if (current_time > '06:00:00', dt = current_date, dt = subdate(current_date,1)) where shift_from <= if (CURRENT_TIME >'06:00:00', CURRENT_DATE, subdate(current_date,1)) and shift_to >= if (CURRENT_TIME >'06:00:00', CURRENT_DATE, subdate(current_date,1)) and shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= if (CURRENT_TIME > '06:00:00', CURRENT_DATE, subdate(current_date,1)) and shift_to >= if (CURRENT_TIME > '06:00:00', CURRENT_DATE, subdate(current_date,1))) group by shifts.dept, shifts.shift order by shifts.shift, present, shifts.dept`)
 
         query.then((result) => {
           if (result[0].length) {
@@ -515,7 +551,8 @@ const routes = [
     path: '/employees',
     method: 'GET',
     handler: (request, reply) => {
-      Knex.raw(`SELECT data.emp_code, data.dt, shifts.name, shifts.designation, shifts.dept, shifts.shift, shifts.emp_type, data.in_time FROM data inner join shifts on shifts.shift_from <= data.dt and shifts.shift_to >= data.dt and shifts.emp_code = data.emp_code where closed = 0 and out_time is null and dt >= subdate(current_date, 1) group by data.emp_code ORDER BY in_time ASC, emp_code asc`).then((result) => {
+      Knex.raw(`SELECT data.emp_code, data.dt, shifts.name, shifts.designation, shifts.dept, shifts.shift, shifts.emp_type, data.in_time FROM data inner join shifts on shifts.shift_from <= data.dt and shifts.shift_to >= data.dt and shifts.emp_code = data.emp_code and shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) where closed = 0 and out_time is null and dt >= subdate(current_date, 1) group by data.emp_code ORDER BY in_time ASC, emp_code asc
+      `).then((result) => {
         if (!result[0].length) {
           return reply({
             success: false,
@@ -525,6 +562,49 @@ const routes = [
           return reply({
             success: true,
             data: result[0]
+          })
+        }
+      })
+    }
+  },
+
+  /* Employee Log */
+  {
+    path: '/employees_log',
+    method: 'POST',
+    config: {
+      auth: {
+        strategy: 'token'
+      }
+    },
+    handler: (request, reply) => {
+      let dt
+      if (request.payload && request.payload.dt) {
+        dt = request.payload.dt
+      }
+      if (!dt) {
+        dt = moment().format('YYYY-MM-DD')
+      }
+
+      // Expected, Present
+      Knex.raw(`select s.shift, count(s.emp_code) as expected, count(d.emp_code) as present from shifts s left join data d on d.emp_code = s.emp_code and d.dt = '${dt}' where s.shift_from <= '${dt}' and s.shift_to >= '${dt}' and s.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s.emp_code and shift_from <= '${dt}' and shift_to >= '${dt}') group by s.shift`).then((result1) => {
+        if (!result1) {
+          return reply({
+            success: false,
+            error: 'No data exists'
+          })
+        } else {
+          let data = []
+          data.push(result1[0])
+
+          Knex.raw(`select s.emp_code, s.name, s.emp_type, s.dept, s.designation, s.shift, d.in_time, d.out_time from shifts s left join data d on d.emp_code = s.emp_code and d.dt = '${dt}' where s.shift_from <= '${dt}' and s.shift_to >= '${dt}' and s.created_at =  (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s.emp_code and shift_from <= '${dt}' and shift_to >= '${dt}') ORDER BY isnull(in_time),in_time, emp_code ASC`).then((result2) => {
+            if (result2) {
+              data.push(result2[0])
+              return reply({
+                success: true,
+                data: data
+              })
+            }
           })
         }
       })
@@ -553,15 +633,16 @@ const routes = [
       var tm22 = today + ' 22:00:00'
       var tm18 = today + ' 18:00:00'
 
-      var deptq = `insert into email(dt, tm, deptname, shift, emp_type, present, expected) (SELECT current_date as dt, '${origtime}' as tm, s.dept, s.shift, s.emp_type, count(d.emp_code) as present, if(s.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm1415}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1), if(s.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1), 0))))) as expected FROM shifts s left join data d on d.emp_code = s.emp_code and d.dt = current_date and out_time is null 
-      where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE 
-      group by s.dept, s.shift, s.emp_type order by shift)`
+      // var deptq = `insert into email(dt, tm, deptname, shift, emp_type, present, expected) (SELECT current_date as dt, '${origtime}' as tm, s.dept, s.shift, s.emp_type, count(d.emp_code) as present, if(s.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm1415}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1), if(s.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1), 0))))) as expected FROM shifts s left join data d on d.emp_code = s.emp_code and d.dt = current_date and out_time is null where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE
+      // group by s.dept, s.shift, s.emp_type order by shift)`
+
+      var deptq = `insert into email(dt, tm, deptname, shift, emp_type, present, expected) (SELECT current_date as dt, '${origtime}' as tm, s.dept, s.shift, s.emp_type, count(d.emp_code) as present, if(s.shift = 'A' and time_to_sec('${tm}') >=  time_to_sec('${tm6}') and time_to_sec('${tm}') <=  time_to_sec('${tm14}'),(select count(*) from shifts where  shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) and dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'G' and time_to_sec('${tm}') >=  time_to_sec('${tm830}') and time_to_sec('${tm}') <=  time_to_sec('${tm1730}'),(select count(*) from shifts where  shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) and dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'B' and time_to_sec('${tm}') >=  time_to_sec('${tm1415}') and time_to_sec('${tm}') <=  time_to_sec('${tm22}'),(select count(*) from shifts where  shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) and dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1), if(s.shift = 'E' and time_to_sec('${tm}') >=  time_to_sec('${tm18}'),(select count(*) from shifts where  shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) and dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1),if(s.shift = 'C' and time_to_sec('${tm}') >=  time_to_sec('${tm22}'),(select count(*) from shifts where  shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) and dept = s.dept and shift=s.shift and emp_type = s.emp_type and shift_from <= current_date and shift_to >= current_date group by dept, shift, emp_type limit 1), 0))))) as expected FROM shifts s left join data d on d.emp_code = s.emp_code and d.dt = current_date and out_time is null where  s.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) and s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE group by s.dept, s.shift, s.emp_type order by shift)`
 
       console.log(deptq)
       Knex.raw(deptq).then((result) => {
         reply({
           success: true,
-        result})
+          result})
       })
     }
   },
@@ -1281,9 +1362,9 @@ function mail (request, reply, message, mispunch, absentees, notInShiftSchedule)
 
   var mailOptions = {
     from: '"Akrivia" <support@akrivia.in>', // sender address
-    to: 'rajarathinam-j@msil.mitsuba-gr.com,venkatesh-kumar@msil.mitsuba-gr.com', // list of receivers
-    cc: 'maheswararao.kinthada@gmail.com',
-    bcc: 'vijay.m@akrivia.in,i.nikhil@akrivia.in,kiran.ys@akrivia.in,ramakrishna.cp@akrivia.in',
+    to: 'rajarathinam-j@msil.mitsuba-gr.com,venkatesh-kumar@msil.mitsuba-gr.com,killi-valavan@msil.mitsuba-gr.com', // list of receivers
+    cc: 'i.nikhil@akrivia.in',
+    bcc: 'vijay.m@akrivia.in,maheswararao.kinthada@gmail.com,kiran.ys@akrivia.in,ramakrishna.cp@akrivia.in,bhaskar.s@akrivia.in',
     // to: 'vijay.m@akrivia.in', // list of receivers
     subject: 'MAPS - Employee Attendance Report for ' + maildate, // Subject line
     text: 'MAPS - Employee Attendance Report', // plain text body
