@@ -438,13 +438,7 @@ const routes = [
         // var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected FROM shifts s left join data d on d.closed = 0 and d.out_time is null and d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE and s.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
 
         // sms query with departments ah and ac
-        var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected,
-        
-        (select count(data.emp_code) from data inner join shifts on shifts.emp_code = data.emp_code and shifts.dept = 'ADMINISTRATION - HOUSE KEEPING' and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE and shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) where data.closed = 0 and data.dt = CURRENT_DATE and data.shift = s.shift ) as ah,
-        
-        (select count(data.emp_code) from data inner join shifts on shifts.emp_code = data.emp_code and shifts.dept = 'ADMINISTRATION - CANTEEN' and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE and shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) where data.closed = 0 and data.dt = CURRENT_DATE and data.shift = s.shift ) as ac
-        
-        FROM shifts s left join data d on d.closed = 0 and d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE and s.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
+        var smsquery = `SELECT s.shift, count(d.emp_code) as present, count(*) as expected, (select count(data.emp_code) from data inner join shifts on shifts.emp_code = data.emp_code and shifts.dept = 'ADMINISTRATION - HOUSE KEEPING' and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE and shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) where data.closed = 0 and data.dt = CURRENT_DATE and data.shift = s.shift ) as ah, (select count(data.emp_code) from data inner join shifts on shifts.emp_code = data.emp_code and shifts.dept = 'ADMINISTRATION - CANTEEN' and shifts.shift_from <= CURRENT_DATE and shifts.shift_to >= CURRENT_DATE and shifts.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = shifts.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) where data.closed = 0 and data.dt = CURRENT_DATE and data.shift = s.shift ) as ac FROM shifts s left join data d on d.closed = 0 and d.dt = CURRENT_DATE and s.emp_code = d.emp_code where s.shift_from <= CURRENT_DATE and s.shift_to >= CURRENT_DATE and s.created_at = (SELECT MAX(s2.created_at) FROM shifts s2 WHERE s2.emp_code = s.emp_code and shift_from <= CURRENT_DATE and shift_to >= CURRENT_DATE) group by s.shift order by field(s.shift, 'a', 'g', 'b', 'e', 'c')`
 
         console.log('sms', smsquery)
 
@@ -488,7 +482,8 @@ const routes = [
                 expected = item.expected
               }
 
-              message += `%0a${item.shift} - ${item.present}/${expected} (AH-${item.ah}, AC-${item.ac})`
+              // message += `%0a${item.shift} - ${item.present}/${expected} (AH-${item.ah}, AC-${item.ac})`
+              message += `%0a${item.shift} - ${item.present}/${expected}`
             })
             if (message) {
               // message = tm.substr(0, tm.length - 3) + '  ' + message.substr(0, message.length - 2)
