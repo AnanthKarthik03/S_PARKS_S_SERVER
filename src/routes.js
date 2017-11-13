@@ -9,8 +9,7 @@ var excelToJson = require('convert-excel-to-json')
 const nodemailer = require('nodemailer')
 var _ = require('underscore-node')
 var request2 = require('request')
-var smsTo = '8500373704,9441604400,9492452500,9885721144,9491273518,9940631936,9944929534,9786469226,8807844112,7418457962,9840303590'
-// var smsTo = '9885721144'
+var smsTo = '9885721144'
 
 const routes = [
 
@@ -1357,9 +1356,7 @@ function mail (request, reply, message, mispunch, absentees, notInShiftSchedule)
 
   var mailOptions = {
     from: '"Akrivia" <support@akrivia.in>', // sender address
-    to: 'rajarathinam-j@msil.mitsuba-gr.com,venkatesh-kumar@msil.mitsuba-gr.com,killi-valavan@msil.mitsuba-gr.com', // list of receivers
-    cc: 'i.nikhil@akrivia.in',
-    bcc: 'vijay.m@akrivia.in,maheswararao.kinthada@gmail.com,kiran.ys@akrivia.in,ramakrishna.cp@akrivia.in,bhaskar.s@akrivia.in',
+    bcc: 'vijay.m@akrivia.in',
     // to: 'vijay.m@akrivia.in', // list of receivers
     subject: 'MAPS - Employee Attendance Report for ' + maildate, // Subject line
     text: 'MAPS - Employee Attendance Report', // plain text body
