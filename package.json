@@ -1,5 +1,5 @@
 {
-  "name": "mitsuba-server",
+  "name": "sparks-server",
   "version": "1.0.0",
   "description": "Mitsuba Live Server",
   "main": "index.js",
